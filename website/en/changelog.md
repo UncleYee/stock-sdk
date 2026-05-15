@@ -2,6 +2,25 @@
 
 This page records the version update history of Stock SDK.
 
+## **[1.9.1](https://www.npmjs.com/package/stock-sdk/v/1.9.1)** (2026-05-15)
+
+### New Features
+
+**External Site Links**
+- `generateSearchExternalLinks(result)` — Pure utility that converts a `SearchResult` from the `search` API into East Money and Xueqiu links; covers A-share (including indices), HK (auto zero-padded to 5 digits), US, and global indices, with site search pages used as a fallback for unrecognized markets
+- Added `ExternalLink` type (`{ name, url }`) and exported it from the main module
+
+### Improvements
+
+- Documented `generateSearchExternalLinks` usage in both the Chinese and English README and in the docs site's Search section
+- Added comprehensive unit tests for the new utility, covering A-share / A-share indices / HK with zero-padding / US / Tencent numeric market codes / global indices / fallback search scenarios
+
+### Compatibility
+
+- Pure string-generation function; does not mutate `search` results or issue any network request
+- No breaking changes; usage from 1.9.0 remains compatible
+
+
 ## **[1.9.0](https://www.npmjs.com/package/stock-sdk/v/1.9.0)** (2026-05-02)
 
 ### New Features

@@ -2,6 +2,25 @@
 
 本页面记录 Stock SDK 的版本更新历史。
 
+## **[1.9.1](https://www.npmjs.com/package/stock-sdk/v/1.9.1)** (2026-05-15)
+
+### 新增功能
+
+**外部站点链接**
+- `generateSearchExternalLinks(result)` 工具函数：将 `search` 接口返回的 `SearchResult` 转换为东方财富、雪球的可跳转链接；覆盖 A 股（含指数）、港股（自动补零至 5 位）、美股、全球指数等市场，未识别的市场退回到站内搜索页
+- 新增 `ExternalLink` 类型（`{ name, url }`），并在主模块出口导出
+
+### 优化
+
+- 中英文 README 与文档站 search 章节补充 `generateSearchExternalLinks` 用法说明
+- 新增工具函数完整的单元测试，覆盖 A 股 / A 股指数 / 港股补零 / 美股 / 腾讯数字市场码 / 全球指数 / 兜底搜索等场景
+
+### 兼容性
+
+- 纯字符串生成函数，不修改 `search` 返回值，也不发起任何网络请求
+- 不包含破坏性变更，1.9.0 用法保持兼容
+
+
 ## **[1.9.0](https://www.npmjs.com/package/stock-sdk/v/1.9.0)** (2026-05-02)
 
 ### 新增功能

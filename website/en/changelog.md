@@ -2,6 +2,52 @@
 
 This page records the version update history of Stock SDK.
 
+## **[1.10.0](https://www.npmjs.com/package/stock-sdk/v/1.10.0)** (2026-05-27)
+
+> Dual-theme release: (1) **Mutual fund extensions** — 4 deep-data methods covering [issue #16](https://github.com/chengzuopeng/stock-sdk/issues/16); (2) **HK / US minute K-line + intraday timeline** — 4 cells in the README matrix flip ❌ → ✅. Also fixes a 5xx ETF / 9xx B-share secid classification bug. **No breaking changes.**
+
+### New Features
+
+**Mutual fund extensions (`FundService`, top-level export)**
+- `getFundDividendList` — Fund dividend events (year-paginated; client-side `code` filter; `page: 'all'` auto-aggregates)
+- `getFundNavHistory` — Full NAV history (unit + accumulated, one call, open-end / ETF / LOF / money-market / QDII)
+- `getFundEstimate` — Intraday NAV estimate (T-1 settled NAV + live estimate)
+- `getFundRankHistory` — Similar-type rank history (daily 3-month rank + percentile)
+
+**HK / US minute K-line + intraday timeline**
+- `getHKMinuteKline(symbol, options?)` — 5/15/30/60-minute K-line, or intraday timeline (`period: '1'`)
+- `getUSMinuteKline(symbol, options?)` — Same as above (US regular session only)
+- New types `HKMinuteKline` / `HKMinuteTimeline` / `USMinuteKline` / `USMinuteTimeline` (structurally aligned with A-share `MinuteKline`, plus `currency` / `code`)
+- Reuses the existing `push2his.eastmoney.com` (33 / 63 subdomains) stack — zero new data source dependencies
+
+**Generic utilities** (top-level export)
+- `fetchJsVars` / `parseJsVars` — Dual-environment parser for `var X = ...; var Y = ...;` style JS variable declarations (pingzhongdata / funddataIndex_Interface, etc.); browsers `<script>`-inject, Node uses fetch + bracket scan; optional `client` integrates with the SDK request stack
+- `withScriptMutex` / `BROWSER_JSVARS_MUTEX_KEY` — Browser global-name mutex to prevent `<script>`-injection concurrent contamination
+- `formatInTz(epoch, tz)` — UTC ms → `YYYY-MM-DD HH:mm` string in any time zone, the inverse of `parseMarketTime`, handles DST
+
+### Bug Fixes
+
+- **`getMarketCode` 5xx / 9xx classification**: codes starting with `5` (on-exchange ETF / LOF, e.g. 510050 / 518880 / 588000) and `9` (Shanghai B-shares) were misclassified to Shenzhen, so `getHistoryKline` etc. returned no data; now correctly mapped to Shanghai (secid=1)
+- **US minute K / timeline time zone**: EastMoney trends2 / kline return `time` strings in **Beijing time**; early implementation parsed with `MARKET_TZ.US` directly, leaving `timestamp` off by 12–13 hours. Fixed: parse as `Asia/Shanghai` for the correct epoch, then `formatInTz` to NYC
+- **HK/US `period='1'` default `ndays` changed from 5 to 1**: aligns with the README "today's timeline" promise; multi-day windows now go through `options.ndays`
+
+### Browser concurrency & request governance
+
+Fund endpoints load via `<script>` injection (fund.eastmoney.com / fundgz.1234567.com.cn have no CORS). pingzhongdata shares `fS_code` / `fS_name`; fundgz shares the fixed `jsonpgz` callback — both prone to concurrent contamination, guarded by `withScriptMutex` global serialization. Node.js real concurrency is unaffected.
+
+The 4 `FundService` methods integrate with `RequestClient` on Node — `providerPolicies.eastmoney` etc. all apply (`fundgz.1234567.com.cn` is explicitly classified as `eastmoney`). HK / US minute K-line endpoints have fully open CORS and reuse the push2his fallback pool.
+
+### Docs & examples
+
+- README matrix: "Mutual Fund" column +4 capability rows; HK / US "Minute K-line" & "Today's timeline" 4 cells ❌ → ✅
+- New [`/api/fund-extended`](/en/api/fund-extended); `/api/minute-kline` adds HK / US sections (with `ndays` parameter + US time zone warning)
+- Playground: new "Fund Extended" category (4 demos) + HK / US minute K-line demos under "K-Line"
+
+### Compatibility
+
+No breaking changes. Only `getMarketCode` returns `'1'` instead of `'0'` for unprefixed codes starting with 5/9 (silent bug fix); this function is not a top-level export and is internal-only — regular users are unaffected.
+
+
 ## **[1.9.3](https://www.npmjs.com/package/stock-sdk/v/1.9.3)** (2026-05-22)
 
 > Bug fix release. Resolves 7 issues discovered after v1.9.0 / v1.9.2. **No breaking changes.**

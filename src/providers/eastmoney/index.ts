@@ -11,10 +11,20 @@ export {
 } from './aShareKline';
 
 // 港股 K 线
-export { getHKHistoryKline, type HKKlineOptions } from './hkKline';
+export {
+  getHKHistoryKline,
+  getHKMinuteKline,
+  type HKKlineOptions,
+  type HKMinuteKlineOptions,
+} from './hkKline';
 
 // 美股 K 线
-export { getUSHistoryKline, type USKlineOptions } from './usKline';
+export {
+  getUSHistoryKline,
+  getUSMinuteKline,
+  type USKlineOptions,
+  type USMinuteKlineOptions,
+} from './usKline';
 
 // 行业板块
 export {
@@ -40,6 +50,14 @@ export {
 
 // 分红派送
 export { getDividendDetail } from './dividend';
+
+// 公募基金扩展数据（分红 / 历史净值 / 估值 / 排名 等）
+export {
+  getFundDividendList,
+  getFundNavHistory,
+  getFundEstimate,
+  getFundRankHistory,
+} from './fund';
 
 // 国内期货 K 线
 export {

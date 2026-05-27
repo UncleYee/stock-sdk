@@ -23,6 +23,9 @@ export {
   type SupportedMarket,
 } from './sdk/index';
 
+// 公募基金扩展（v1.10.0+）：作为顶层 export 与 TradingCalendarService 对齐
+export { FundService } from './sdk/index';
+
 // 导出类型
 export * from './types';
 
@@ -98,6 +101,7 @@ export {
 
 // 时间工具（changelog 已承诺：MARKET_TZ / MarketTz / TimeMeta /
 // parseMarketTime / buildTimeMeta / buildTimeMetaFromDateAndTime）
+// v1.10.0+ 新增 formatInTz：epoch → 指定时区 'YYYY-MM-DD HH:mm' 字符串
 export {
   MARKET_TZ,
   type MarketTz,
@@ -105,6 +109,7 @@ export {
   parseMarketTime,
   buildTimeMeta,
   buildTimeMetaFromDateAndTime,
+  formatInTz,
 } from './core';
 
 // 导出配置类型
@@ -118,6 +123,13 @@ export type {
 
 // 导出选项类型
 export type {
+  // A 股 / 港股 / 美股 K 线选项（API 文档已公开使用这些类型名，必须在根入口暴露）
+  HistoryKlineOptions,
+  MinuteKlineOptions,
+  HKKlineOptions,
+  HKMinuteKlineOptions,
+  USKlineOptions,
+  USMinuteKlineOptions,
   IndustryBoardKlineOptions,
   IndustryBoardMinuteKlineOptions,
   ConceptBoardKlineOptions,
@@ -141,3 +153,12 @@ export type {
 
 // 导出 JSONP 工具（供高级用户直接使用）
 export { jsonpRequest, extractJsonFromJsonp, type JsonpOptions } from './core';
+
+// JS 变量声明文件解析工具 + 浏览器互斥锁（v1.10.0+，供高级用户直接使用）
+export {
+  fetchJsVars,
+  parseJsVars,
+  type FetchJsVarsOptions,
+  withScriptMutex,
+} from './core';
+export { BROWSER_JSVARS_MUTEX_KEY } from './core/jsVars';

@@ -16,7 +16,11 @@ import type {
   MinuteKline,
   TodayTimelineResponse,
   HKHistoryKline,
+  HKMinuteKline,
+  HKMinuteTimeline,
   USHistoryKline,
+  USMinuteKline,
+  USMinuteTimeline,
   HKUSHistoryKline,
   IndustryBoard,
   IndustryBoardSpot,
@@ -74,6 +78,12 @@ import type {
   BlockTradeDailyStatItem,
   MarginAccountItem,
   MarginTargetItem,
+  // 公募基金扩展（v1.10.0+）
+  FundDividendListOptions,
+  FundDividendListResult,
+  FundNavHistory,
+  FundEstimate,
+  FundRankHistory,
 } from './types';
 import { type KlineWithIndicators } from './indicators';
 import {
@@ -89,6 +99,7 @@ import {
   DragonTigerService,
   DataService,
   TradingCalendarService,
+  FundService,
   type KlineWithIndicatorsOptions,
   type MarketStatus,
   type SupportedMarket,
@@ -118,6 +129,7 @@ export class StockSDK {
   private readonly dragonTigerService: DragonTigerService;
   private readonly dataService: DataService;
   private readonly tradingCalendarService: TradingCalendarService;
+  private readonly fundService: FundService;
 
   /**
    * 创建 Stock SDK 实例。
@@ -141,6 +153,7 @@ export class StockSDK {
     this.dragonTigerService = new DragonTigerService(this.client);
     this.dataService = new DataService(this.client);
     this.tradingCalendarService = new TradingCalendarService(this.quoteService);
+    this.fundService = new FundService(this.client);
   }
 
   /**
@@ -355,6 +368,23 @@ export class StockSDK {
   }
 
   /**
+   * 获取港股分钟 K 线（5/15/30/60 分钟）或当日分时（1 分钟）。
+   *
+   * `options.period='1'` 时走 `trends2/get`，返回 `HKMinuteTimeline[]`；
+   * `options.period='5'|'15'|'30'|'60'` 时走 `kline/get`，返回 `HKMinuteKline[]`。
+   *
+   * @param symbol 港股代码，纯数字或带 `hk` 前缀均可（如 `'00700'`、`'hk00700'`）
+   * @param options 周期 / 复权 / 起止时间
+   * @since v1.10.0
+   */
+  getHKMinuteKline(
+    symbol: string,
+    options?: import('./providers/eastmoney').HKMinuteKlineOptions
+  ): Promise<HKMinuteTimeline[] | HKMinuteKline[]> {
+    return this.klineService.getHKMinuteKline(symbol, options);
+  }
+
+  /**
    * 获取美股历史 K 线。
    *
    * **复权默认值:`adjust='qfq'`(前复权)。** 详见
@@ -368,6 +398,22 @@ export class StockSDK {
     options?: import('./providers/eastmoney').USKlineOptions
   ): Promise<USHistoryKline[]> {
     return this.klineService.getUSHistoryKline(symbol, options);
+  }
+
+  /**
+   * 获取美股分钟 K 线（5/15/30/60 分钟）或当日分时（1 分钟）。
+   *
+   * 不含盘前 / 盘后数据，仅常规交易时段。
+   *
+   * @param symbol 美股代码，格式 `{market}.{ticker}`（如 `'105.AAPL'`、`'106.BABA'`）
+   * @param options 周期 / 复权 / 起止时间
+   * @since v1.10.0
+   */
+  getUSMinuteKline(
+    symbol: string,
+    options?: import('./providers/eastmoney').USMinuteKlineOptions
+  ): Promise<USMinuteTimeline[] | USMinuteKline[]> {
+    return this.klineService.getUSMinuteKline(symbol, options);
   }
 
   /**
@@ -938,6 +984,66 @@ export class StockSDK {
    */
   getMarginTargetList(date?: string): Promise<MarginTargetItem[]> {
     return this.dataService.getMarginTargetList(date);
+  }
+
+  // ============================================================
+  // 公募基金扩展（v1.10.0+）：分红 / 历史净值 / 估值 / 排名 等
+  // ============================================================
+
+  /**
+   * 获取基金分红明细列表（来自东方财富 / 天天基金分红送配频道）。
+   *
+   * 接口本身只支持「年份 + 全市场 + 翻页」查询，不支持服务端按代码精确查；
+   * 要拿单只基金完整分红记录，请同时设置 `page: 'all'` 与 `code`。
+   *
+   * @param options 查询选项；默认拉当前年第 1 页、按除息日倒序
+   */
+  getFundDividendList(
+    options?: FundDividendListOptions
+  ): Promise<FundDividendListResult> {
+    return this.fundService.getFundDividendList(options);
+  }
+
+  /**
+   * 获取基金历史净值（单位净值 + 累计净值，全历史一次返回）。
+   *
+   * 数据源：`fund.eastmoney.com/pingzhongdata/{code}.js`
+   * 一次请求即可拿到该基金从成立日到最新交易日的全部净值（数千条）。
+   * 开放式 / ETF / LOF / 货币 / QDII 均通用。
+   *
+   * 注意：响应体较大（约 600KB / gzip 后约 120KB），建议在应用层做缓存。
+   *
+   * @param code 基金代码，如 `'110011'`
+   */
+  getFundNavHistory(code: string): Promise<FundNavHistory> {
+    return this.fundService.getFundNavHistory(code);
+  }
+
+  /**
+   * 获取基金当日实时估值（来自天天基金 fundgz 接口）。
+   *
+   * 同时返回最新已结算的单位净值（`nav` / `navDate`）和盘中估算
+   * （`estimatedNav` / `estimatedChangePercent` / `estimateTime`），
+   * 方便前端做"当日实时表现 vs 上一收盘"对比。
+   *
+   * QDII / 非交易日 / 部分小众基金的盘中估算字段可能为空，将返回 `null`。
+   *
+   * @param code 基金代码（纯数字，如 `'005827'`）
+   */
+  getFundEstimate(code: string): Promise<FundEstimate> {
+    return this.fundService.getFundEstimate(code);
+  }
+
+  /**
+   * 获取基金同类排名走势（每日近三月排名 + 百分位）。
+   *
+   * 数据源与 `getFundNavHistory` 相同（`pingzhongdata/{code}.js`），
+   * 适合做"该基金在同类基金里的相对表现"折线图。
+   *
+   * @param code 基金代码
+   */
+  getFundRankHistory(code: string): Promise<FundRankHistory> {
+    return this.fundService.getFundRankHistory(code);
   }
 }
 

@@ -1,0 +1,458 @@
+/**
+ * 东方财富 - 公募基金扩展数据
+ *
+ * 数据源：https://fund.eastmoney.com/Data/funddataIndex_Interface.aspx
+ *
+ * 该接口返回一段 JS 变量声明（`var pageinfo = ...; var jjfh_data = ...;`），
+ * 通过 fetchJsVars 双端解析。
+ */
+import { fetchJsVars } from '../../core/jsVars';
+import { extractJsonFromJsonp } from '../../core/jsonp';
+import { withScriptMutex } from '../../core/scriptMutex';
+import type { RequestClient } from '../../core/request';
+import type {
+  FundDividend,
+  FundDividendListOptions,
+  FundDividendListResult,
+  FundEstimate,
+  FundNavHistory,
+  FundNavPoint,
+  FundRankHistory,
+  FundRankPoint,
+} from '../../types';
+
+const FUND_DATA_INDEX_URL =
+  'https://fund.eastmoney.com/Data/funddataIndex_Interface.aspx';
+
+const FUND_PINGZHONGDATA_URL = 'https://fund.eastmoney.com/pingzhongdata';
+
+/** 天天基金实时估值接口（JSONP，callback 名固定为 `jsonpgz`） */
+const FUND_GZ_URL = 'https://fundgz.1234567.com.cn/js';
+
+/**
+ * 运行时检查是否在浏览器环境。
+ * 写成函数（而非 module-level const）是为了让单测能通过 `vi.stubGlobal` 动态切换环境。
+ */
+function isBrowserEnv(): boolean {
+  return typeof document !== 'undefined' && typeof window !== 'undefined';
+}
+
+const DEFAULT_FUNDGZ_TIMEOUT_MS = 10000;
+
+interface FundDividendRaw {
+  /** `[总页数, 每页条数, 当前页]` */
+  pageinfo?: [number, number, number];
+  /** 每条 7 个字段：`[code, name, 登记日, 除息日, 分红, 发放日, 类型]` */
+  jjfh_data?: string[][];
+}
+
+function currentYearShanghai(): number {
+  // 简化实现：用本地时间取年份。A 股时区 UTC+8，跨年瞬间在 UTC-8~+8 时区
+  // 之间可能出现 ±1 天误差，但对"年"维度足够（用户也可显式传 year 覆盖）。
+  return new Date().getFullYear();
+}
+
+function buildUrl(opts: FundDividendListOptions, page: number): string {
+  const params = new URLSearchParams({
+    dt: '8',
+    page: String(page),
+    rank: opts.rank ?? 'FSRQ',
+    sort: opts.sort ?? 'desc',
+    gs: '',
+    ftype: opts.fundType ?? '',
+    year: String(opts.year ?? currentYearShanghai()),
+  });
+  return `${FUND_DATA_INDEX_URL}?${params.toString()}`;
+}
+
+function parseDate(s: string | undefined): string | null {
+  if (!s) return null;
+  const m = s.trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function parseNumber(s: string | undefined): number | null {
+  if (s === undefined || s === '') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function mapRow(row: string[]): FundDividend {
+  return {
+    code: row[0] ?? '',
+    name: row[1] ?? '',
+    equityRecordDate: parseDate(row[2]),
+    exDividendDate: parseDate(row[3]),
+    dividendPerShare: parseNumber(row[4]),
+    payDate: parseDate(row[5]),
+    raw: row,
+  };
+}
+
+/** 拉取单页（不做客户端过滤、不做翻页聚合） */
+async function fetchOnePage(
+  client: RequestClient,
+  opts: FundDividendListOptions,
+  page: number
+): Promise<FundDividendListResult> {
+  const url = buildUrl(opts, page);
+  const vars = await fetchJsVars<FundDividendRaw>(
+    url,
+    ['pageinfo', 'jjfh_data'],
+    { client }
+  );
+  const info = vars.pageinfo ?? [0, 0, page];
+  const [totalPages = 0, pageSize = 0, currentPage = page] = info;
+  const rawRows = vars.jjfh_data ?? [];
+  return {
+    items: rawRows.map(mapRow),
+    totalPages,
+    pageSize,
+    currentPage,
+  };
+}
+
+/**
+ * 获取基金分红明细列表（来自东方财富 / 天天基金分红送配频道）。
+ *
+ * 接口本身只支持「年份 + 全市场 + 翻页」查询，不能服务端按基金代码精确查。
+ * SDK 提供 `code` 选项在客户端过滤；若要拿到某只基金该年完整分红记录，
+ * 应搭配 `page: 'all'` 一起使用。
+ *
+ * @example
+ * // 拉 2024 年第 1 页（默认按除息日倒序）
+ * await sdk.getFundDividendList({ year: 2024 });
+ *
+ * @example
+ * // 拉 2024 年 110011 的全部分红
+ * await sdk.getFundDividendList({ year: 2024, page: 'all', code: '110011' });
+ */
+export async function getFundDividendList(
+  client: RequestClient,
+  options: FundDividendListOptions = {}
+): Promise<FundDividendListResult> {
+  if (options.page === 'all') {
+    const first = await fetchOnePage(client, options, 1);
+    let items = first.items;
+    for (let p = 2; p <= first.totalPages; p++) {
+      const next = await fetchOnePage(client, options, p);
+      items = items.concat(next.items);
+    }
+    if (options.code) {
+      items = items.filter((it) => it.code === options.code);
+    }
+    return {
+      items,
+      totalPages: first.totalPages,
+      pageSize: first.pageSize,
+      currentPage: -1,
+    };
+  }
+
+  const page = options.page ?? 1;
+  const result = await fetchOnePage(client, options, page);
+  if (options.code) {
+    return {
+      ...result,
+      items: result.items.filter((it) => it.code === options.code),
+    };
+  }
+  return result;
+}
+
+// ============================================================
+// 历史净值（pingzhongdata.js）
+// ============================================================
+
+interface FundNavRaw {
+  fS_code?: string;
+  fS_name?: string;
+  /** `[{x, y, equityReturn, unitMoney}, ...]` —— 单位净值走势 */
+  Data_netWorthTrend?: Array<{
+    x: number;
+    y: number;
+    equityReturn: number | string;
+    unitMoney: string;
+  }>;
+  /** `[[x, accNav], ...]` —— 累计净值走势 */
+  Data_ACWorthTrend?: Array<[number, number]>;
+}
+
+function toDailyReturn(v: number | string | undefined): number | null {
+  if (v === undefined || v === '' || v === null) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function timestampToDate(ts: number): string {
+  // pingzhongdata 的 x 是 UTC 当日 00:00 的毫秒数（每条对应 A 股一个交易日）
+  // 直接用 ISO 字符串切前 10 位即可得到 YYYY-MM-DD
+  return new Date(ts).toISOString().slice(0, 10);
+}
+
+/**
+ * 获取基金历史净值（单位净值 + 累计净值，按 timestamp 对齐合并）。
+ *
+ * 数据源：`https://fund.eastmoney.com/pingzhongdata/{code}.js`
+ *
+ * 一次请求拿到该基金从成立日到最新交易日的全部净值（数千条），
+ * 无需翻页。开放式基金、ETF、LOF、货币、QDII 均通用。
+ *
+ * @param code 基金代码（纯数字，如 `'110011'`）
+ *
+ * @example
+ * const h = await sdk.getFundNavHistory('110011');
+ * console.log(h.name, h.items.length, h.items[h.items.length - 1]);
+ */
+export async function getFundNavHistory(
+  client: RequestClient,
+  code: string
+): Promise<FundNavHistory> {
+  const url = `${FUND_PINGZHONGDATA_URL}/${encodeURIComponent(code)}.js`;
+  const vars = await fetchJsVars<FundNavRaw>(
+    url,
+    ['fS_code', 'fS_name', 'Data_netWorthTrend', 'Data_ACWorthTrend'],
+    { client }
+  );
+
+  const trend = vars.Data_netWorthTrend ?? [];
+  // 把累计净值按 timestamp 建索引，O(1) 对齐
+  const accMap = new Map<number, number>();
+  for (const row of vars.Data_ACWorthTrend ?? []) {
+    if (Array.isArray(row) && row.length >= 2) {
+      accMap.set(row[0], row[1]);
+    }
+  }
+
+  const items: FundNavPoint[] = trend.map((p) => ({
+    date: timestampToDate(p.x),
+    timestamp: p.x,
+    nav: p.y,
+    accNav: accMap.has(p.x) ? (accMap.get(p.x) as number) : null,
+    dailyReturn: toDailyReturn(p.equityReturn),
+    unitMoney: p.unitMoney ?? '',
+  }));
+
+  return {
+    code: vars.fS_code ?? code,
+    name: vars.fS_name ?? null,
+    items,
+  };
+}
+
+// ============================================================
+// 实时估值（fundgz.1234567.com.cn）
+// ============================================================
+
+interface FundGzPayload {
+  fundcode?: string;
+  name?: string;
+  jzrq?: string; // 净值日期
+  dwjz?: string; // 单位净值
+  gsz?: string; // 估算净值
+  gszzl?: string; // 估算涨跌幅 %
+  gztime?: string; // 估算时间
+}
+
+/**
+ * 双端拉取并解析 fundgz JSONP（固定 callback 名 `jsonpgz`）。
+ *
+ * 浏览器端：因 fundgz.1234567.com.cn 无 CORS 头，必须走 `<script>` 注入；
+ * 利用其固定 callback 名 `jsonpgz`，临时挂在 window 上读返回。
+ *
+ * Node 端：直接 fetch 文本 + `extractJsonFromJsonp` 剥离包装。
+ */
+function fetchFundGz(
+  client: RequestClient,
+  code: string,
+  timeout = DEFAULT_FUNDGZ_TIMEOUT_MS
+): Promise<FundGzPayload> {
+  const url = `${FUND_GZ_URL}/${encodeURIComponent(code)}.js?rt=${Date.now()}`;
+  if (isBrowserEnv()) {
+    // 浏览器：必须串行（fundgz 强制返回 `jsonpgz(...)`，callback 名无法动态化，
+    // 同时刻多请求会互相覆盖 window.jsonpgz）。
+    return withScriptMutex('fundgz:jsonpgz', () =>
+      browserFetchFundGz(url, timeout)
+    );
+  }
+  // Node：超时 / 重试 / 限流交给 client 治理，不再透传本地 timeout
+  return nodeFetchFundGz(client, url);
+}
+
+function browserFetchFundGz(
+  url: string,
+  timeout: number
+): Promise<FundGzPayload> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const win = window as unknown as Record<string, unknown>;
+    const prevCb = win.jsonpgz;
+    let settled = false;
+
+    const cleanup = () => {
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      // 恢复 jsonpgz 原值，避免污染用户的全局空间
+      if (prevCb === undefined) {
+        try {
+          delete win.jsonpgz;
+        } catch {
+          /* ignore */
+        }
+      } else {
+        win.jsonpgz = prevCb;
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(new Error(`fundgz JSONP timed out after ${timeout}ms: ${url}`));
+    }, timeout);
+
+    win.jsonpgz = (data: FundGzPayload) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cleanup();
+      resolve(data ?? {});
+    };
+
+    script.onerror = () => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error(`fundgz JSONP script load failed: ${url}`));
+    };
+
+    script.src = url;
+    document.head.appendChild(script);
+  });
+}
+
+async function nodeFetchFundGz(
+  client: RequestClient,
+  url: string
+): Promise<FundGzPayload> {
+  // 走 SDK RequestClient：享受 retry / rateLimit / circuitBreaker / fallback host
+  // fundgz.1234567.com.cn 不在 inferProviderFromUrl 名单，需显式归为 eastmoney
+  // 以应用 providerPolicies.eastmoney 的策略
+  const text = await client.get<string>(url, {
+    responseType: 'text',
+    provider: 'eastmoney',
+  });
+  const trimmed = text.trim();
+  if (!trimmed) return {};
+  try {
+    return extractJsonFromJsonp(trimmed) as FundGzPayload;
+  } catch {
+    return {};
+  }
+}
+
+function toNullableNumber(s: string | undefined): number | null {
+  if (s === undefined || s === '' || s === '--') return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 获取基金当日实时估值（来自天天基金 fundgz 接口）。
+ *
+ * 同时返回最新已结算的单位净值（`nav` + `navDate`）和盘中估算
+ * （`estimatedNav` + `estimatedChangePercent` + `estimateTime`），
+ * 方便对比当日表现。
+ *
+ * QDII / 非交易日 / 部分小众基金的盘中估算字段可能为空，将返回 `null`。
+ *
+ * @param code 基金代码（纯数字，如 `'005827'`）
+ */
+export async function getFundEstimate(
+  client: RequestClient,
+  code: string
+): Promise<FundEstimate> {
+  const raw = await fetchFundGz(client, code);
+  return {
+    code: raw.fundcode ?? code,
+    name: raw.name ?? null,
+    navDate: raw.jzrq?.trim() ? raw.jzrq.trim() : null,
+    nav: toNullableNumber(raw.dwjz),
+    estimatedNav: toNullableNumber(raw.gsz),
+    estimatedChangePercent: toNullableNumber(raw.gszzl),
+    estimateTime: raw.gztime?.trim() ? raw.gztime.trim() : null,
+  };
+}
+
+// ============================================================
+// 同类排名走势（pingzhongdata.js 的 rank 字段）
+// ============================================================
+
+interface FundRankRaw {
+  fS_code?: string;
+  fS_name?: string;
+  /** `[{x: ms, y: 排名, sc: 同类总数}, ...]` */
+  Data_rateInSimilarType?: Array<{
+    x: number;
+    y: number | string;
+    sc: number | string;
+  }>;
+  /** `[[ms, 百分位], ...]` */
+  Data_rateInSimilarPersent?: Array<[number, number]>;
+}
+
+function toNullableInt(v: number | string | undefined): number | null {
+  if (v === undefined || v === '' || v === null) return null;
+  const n = typeof v === 'number' ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * 获取基金同类排名走势（每日近三月排名 + 百分位）。
+ *
+ * 数据源：与 `getFundNavHistory` 相同的 `pingzhongdata/{code}.js`，
+ * 取 `Data_rateInSimilarType`（排名 + 同类总数）和
+ * `Data_rateInSimilarPersent`（百分位），按 timestamp 对齐合并。
+ *
+ * @param code 基金代码
+ */
+export async function getFundRankHistory(
+  client: RequestClient,
+  code: string
+): Promise<FundRankHistory> {
+  const url = `${FUND_PINGZHONGDATA_URL}/${encodeURIComponent(code)}.js`;
+  const vars = await fetchJsVars<FundRankRaw>(
+    url,
+    [
+      'fS_code',
+      'fS_name',
+      'Data_rateInSimilarType',
+      'Data_rateInSimilarPersent',
+    ],
+    { client }
+  );
+
+  const series = vars.Data_rateInSimilarType ?? [];
+  const percentMap = new Map<number, number>();
+  for (const row of vars.Data_rateInSimilarPersent ?? []) {
+    if (Array.isArray(row) && row.length >= 2) {
+      percentMap.set(row[0], row[1]);
+    }
+  }
+
+  const items: FundRankPoint[] = series.map((p) => ({
+    date: timestampToDate(p.x),
+    timestamp: p.x,
+    rank: toNullableInt(p.y),
+    total: toNullableInt(p.sc),
+    percentile: percentMap.has(p.x) ? (percentMap.get(p.x) as number) : null,
+  }));
+
+  return {
+    code: vars.fS_code ?? code,
+    name: vars.fS_name ?? null,
+    items,
+  };
+}

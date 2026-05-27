@@ -66,6 +66,8 @@ export {
   EM_TRENDS_URL,
   EM_HK_KLINE_URL,
   EM_US_KLINE_URL,
+  EM_HK_TRENDS_URL,
+  EM_US_TRENDS_URL,
   EM_BOARD_LIST_URL,
   EM_BOARD_SPOT_URL,
   EM_BOARD_CONS_URL,
@@ -134,6 +136,12 @@ export {
 // JSONP
 export { jsonpRequest, extractJsonFromJsonp, type JsonpOptions } from './jsonp';
 
+// JS 变量声明文件解析（用于 pingzhongdata / funddataIndex_Interface 等非 JSONP 接口）
+export { fetchJsVars, parseJsVars, type FetchJsVarsOptions } from './jsVars';
+
+// 浏览器全局名级互斥锁（用于 <script> 注入的并发安全）
+export { withScriptMutex } from './scriptMutex';
+
 // 熔断器
 export {
   CircuitBreaker,
@@ -156,4 +164,5 @@ export {
   parseMarketTime,
   buildTimeMeta,
   buildTimeMetaFromDateAndTime,
+  formatInTz,
 } from './time';

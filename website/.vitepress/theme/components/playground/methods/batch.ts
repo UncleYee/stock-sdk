@@ -45,6 +45,7 @@ export const batchMethods: MethodSpec[] = [
     name: 'getAShareCodeList',
     desc: '获取全部 A 股代码',
     category: 'batch',
+    market: ['a'],
     params: [
       {
         key: 'simple',
@@ -71,6 +72,7 @@ export const batchMethods: MethodSpec[] = [
     name: 'getHKCodeList',
     desc: '获取全部港股代码',
     category: 'batch',
+    market: ['hk'],
     params: [],
     code: () => `const codes = await sdk.getHKCodeList();
 console.log(codes[0]);  // '00700'`,
@@ -80,6 +82,7 @@ console.log(codes[0]);  // '00700'`,
     name: 'getFundCodeList',
     desc: '获取全部基金代码',
     category: 'batch',
+    market: ['fund'],
     params: [],
     code: () => `const codes = await sdk.getFundCodeList();
 console.log(codes.length);  // 26068
@@ -90,6 +93,7 @@ console.log(codes.slice(0, 5));  // ['000001', '000002', ...]`,
     name: 'getUSCodeList',
     desc: '获取全部美股代码',
     category: 'batch',
+    market: ['us'],
     params: [
       {
         key: 'simple',
@@ -116,6 +120,7 @@ console.log(codes.slice(0, 5));  // ['000001', '000002', ...]`,
     name: 'getAllAShareQuotes',
     desc: '获取全市场 A 股行情',
     category: 'batch',
+    market: ['a'],
     params: [
       { key: 'market', label: '市场筛选', type: 'select', default: '', options: A_SHARE_MARKET_OPTIONS },
       { key: 'batchSize', label: '批量大小', type: 'number', default: '500', placeholder: '默认 500' },
@@ -138,6 +143,7 @@ console.log(\`共 \${allQuotes.length} 只\`);`,
     name: 'getAllHKShareQuotes',
     desc: '获取全市场港股行情',
     category: 'batch',
+    market: ['hk'],
     params: [
       { key: 'batchSize', label: '批量大小', type: 'number', default: '300', placeholder: '默认 500' },
       { key: 'concurrency', label: '并发数', type: 'number', default: '5', placeholder: '默认 7' },
@@ -157,6 +163,7 @@ console.log(allHKQuotes[0].currency);  // 货币(HKD)`,
     name: 'getAllUSShareQuotes',
     desc: '获取全市场美股行情',
     category: 'batch',
+    market: ['us'],
     params: [
       { key: 'market', label: '市场筛选', type: 'select', default: '', options: US_MARKET_OPTIONS },
       { key: 'batchSize', label: '批量大小', type: 'number', default: '300', placeholder: '默认 500' },
@@ -179,6 +186,7 @@ console.log(allUSQuotes[0].name);      // 股票名称`,
     name: 'getAllQuotesByCodes',
     desc: '按指定代码列表批量获取 A 股完整行情',
     category: 'batch',
+    market: ['a'],
     params: [
       {
         key: 'codes',
@@ -212,6 +220,7 @@ console.log(quotes[0].price);  // 当前价`;
     name: 'batchRaw',
     desc: '腾讯批量行情原始接口（高级用法，返回未解析字段）',
     category: 'batch',
+    market: ['a'],
     params: [
       {
         key: 'params',

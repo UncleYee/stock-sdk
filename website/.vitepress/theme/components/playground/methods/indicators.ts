@@ -13,6 +13,7 @@ export const indicatorsMethods: MethodSpec[] = [
     name: 'getKlineWithIndicators',
     desc: '获取带技术指标的 K 线',
     category: 'indicator',
+    market: ['a', 'hk', 'us'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: 'sz000001', required: true, placeholder: '支持 A股/港股/美股' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },

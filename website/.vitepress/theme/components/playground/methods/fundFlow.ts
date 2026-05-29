@@ -12,7 +12,8 @@ export const fundFlowMethods: MethodSpec[] = [
   {
     name: 'getIndividualFundFlow',
     desc: '获取个股资金流历史（日/周/月）',
-    category: 'extended',
+    category: 'fundFlow',
+    market: ['a'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: 'sh600519', required: true, placeholder: '如 sh600519 或 600519' },
       { key: 'period', label: '周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -27,7 +28,8 @@ console.log(flow.at(-1)?.mainNetInflow);   // 最新主力净流入(元)`,
   {
     name: 'getMarketFundFlow',
     desc: '大盘资金流（上证 + 深证）',
-    category: 'extended',
+    category: 'fundFlow',
+    market: ['a'],
     params: [],
     code: () => `const market = await sdk.getMarketFundFlow();
 console.log(market.length);
@@ -39,7 +41,8 @@ console.log(market.at(-1)?.mainNetInflow);`,
   {
     name: 'getFundFlowRank',
     desc: '个股资金流排名（沪深北 A 股全市场）',
-    category: 'extended',
+    category: 'fundFlow',
+    market: ['a'],
     params: [
       { key: 'indicator', label: '排名周期', type: 'select', default: 'today', options: FUND_FLOW_INDICATOR_OPTIONS },
     ],
@@ -53,7 +56,8 @@ console.log(rank[0]?.mainNetInflow);  // 主力净流入(元)`,
   {
     name: 'getSectorFundFlowRank',
     desc: '板块资金流排名（行业 / 概念 / 地域）',
-    category: 'extended',
+    category: 'fundFlow',
+    market: ['board'],
     params: [
       { key: 'indicator', label: '排名周期', type: 'select', default: 'today', options: FUND_FLOW_INDICATOR_OPTIONS },
       { key: 'sectorType', label: '板块类型', type: 'select', default: 'industry', options: SECTOR_TYPE_OPTIONS },
@@ -74,7 +78,8 @@ console.log(sectors[0]?.topStockName);   // 该板块的领涨股`,
   {
     name: 'getSectorFundFlowHistory',
     desc: '单个板块的历史资金流',
-    category: 'extended',
+    category: 'fundFlow',
+    market: ['board'],
     params: [
       { key: 'symbol', label: '板块代码', type: 'text', default: 'BK0475', required: true, placeholder: '如 BK0475 (银行) 或 90.BK0475' },
       { key: 'period', label: '周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },

@@ -6,6 +6,7 @@ export const searchMethods: MethodSpec[] = [
     name: 'search',
     desc: '搜索股票',
     category: 'search',
+    market: ['all'],
     params: [
       { key: 'keyword', label: '关键词', type: 'text', default: 'maotai', required: true, placeholder: '代码 / 名称 / 拼音' },
     ],

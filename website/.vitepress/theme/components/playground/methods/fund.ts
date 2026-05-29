@@ -13,6 +13,7 @@ export const fundMethods: MethodSpec[] = [
     name: 'getFundDividendList',
     desc: '基金 / ETF 分红明细（按年份分页，可按代码过滤）',
     category: 'fund',
+    market: ['fund'],
     params: [
       {
         key: 'year',
@@ -65,6 +66,7 @@ console.log(r.items[0]);
     name: 'getFundNavHistory',
     desc: '基金历史净值（单位 + 累计，一次返回全历史）',
     category: 'fund',
+    market: ['fund'],
     params: [
       {
         key: 'code',
@@ -86,6 +88,7 @@ console.log('最近 5 条:', h.items.slice(-5));`,
     name: 'getFundEstimate',
     desc: '基金当日实时估值（含 T-1 净值 + 盘中估算）',
     category: 'fund',
+    market: ['fund'],
     params: [
       {
         key: 'code',
@@ -107,6 +110,7 @@ console.log('估算时间:', e.estimateTime);`,
     name: 'getFundRankHistory',
     desc: '基金同类排名走势（每日近三月排名 + 百分位）',
     category: 'fund',
+    market: ['fund'],
     params: [
       {
         key: 'code',

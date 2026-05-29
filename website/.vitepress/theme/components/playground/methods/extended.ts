@@ -9,6 +9,7 @@ export const extendedMethods: MethodSpec[] = [
     name: 'getFundFlow',
     desc: '获取资金流向',
     category: 'extended',
+    market: ['a'],
     params: [
       { key: 'codes', label: '股票代码', type: 'text', default: 'sz000858', required: true, placeholder: '多个用逗号分隔' },
     ],
@@ -21,6 +22,7 @@ console.log(flows[0].mainNetRatio);  // 主力净流入占比`,
     name: 'getPanelLargeOrder',
     desc: '获取盘口大单占比',
     category: 'extended',
+    market: ['a'],
     params: [
       { key: 'codes', label: '股票代码', type: 'text', default: 'sz000858', required: true, placeholder: '多个用逗号分隔' },
     ],
@@ -33,6 +35,7 @@ console.log(orders[0].sellLargeRatio);  // 卖盘大单占比`,
     name: 'getTradingCalendar',
     desc: '获取 A 股交易日历',
     category: 'extended',
+    market: ['all'],
     params: [],
     code: () => `const calendar = await sdk.getTradingCalendar();
 console.log(calendar.length);        // 交易日总数
@@ -44,6 +47,7 @@ console.log(calendar.slice(-5));     // 最近 5 个交易日`,
     name: 'getDividendDetail',
     desc: '获取股票分红派送详情',
     category: 'extended',
+    market: ['a'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: '000001', required: true, placeholder: '如 000001 或 sz000001' },
     ],

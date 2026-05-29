@@ -6,6 +6,7 @@ export const optionsMethods: MethodSpec[] = [
     name: 'getIndexOptionSpot',
     desc: '获取股指期权 T 型报价（看涨 + 看跌）',
     category: 'options',
+    market: ['options'],
     params: [
       {
         key: 'product',
@@ -31,6 +32,7 @@ console.log(t.calls[0].code);  // 合约代码`,
     name: 'getIndexOptionKline',
     desc: '获取股指期权合约日 K 线',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'symbol', label: '合约代码', type: 'text', default: 'io2506C4000', required: true, placeholder: '如 io2506C4000' },
     ],
@@ -44,6 +46,7 @@ console.log(klines[0].volume); // 成交量`,
     name: 'getCFFEXOptionQuotes',
     desc: '获取中金所全部期权实时行情',
     category: 'options',
+    market: ['options'],
     params: [],
     code: () => `const quotes = await sdk.getCFFEXOptionQuotes();
 console.log(quotes[0].code);           // 合约代码
@@ -56,6 +59,7 @@ console.log(quotes[0].remainDays);     // 剩余天数`,
     name: 'getETFOptionMonths',
     desc: '获取 ETF 期权到期月份列表',
     category: 'options',
+    market: ['options'],
     params: [
       {
         key: 'cate',
@@ -80,6 +84,7 @@ console.log(info.stockId);  // 标的代码`,
     name: 'getETFOptionExpireDay',
     desc: '获取 ETF 期权到期日信息',
     category: 'options',
+    market: ['options'],
     params: [
       {
         key: 'cate',
@@ -103,6 +108,7 @@ console.log(info.remainderDays);  // 剩余天数`,
     name: 'getETFOptionMinute',
     desc: '获取 ETF 期权当日分钟行情',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'code', label: '期权代码', type: 'text', default: '10009633', required: true, placeholder: '纯数字' },
     ],
@@ -116,6 +122,7 @@ console.log(data[0].price);   // 价格`,
     name: 'getETFOptionDailyKline',
     desc: '获取 ETF 期权历史日 K 线',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'code', label: '期权代码', type: 'text', default: '10009633', required: true, placeholder: '纯数字' },
     ],
@@ -128,6 +135,7 @@ console.log(klines[0].close);  // 收盘价`,
     name: 'getETFOption5DayMinute',
     desc: '获取 ETF 期权 5 日分钟行情',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'code', label: '期权代码', type: 'text', default: '10009633', required: true, placeholder: '纯数字' },
     ],
@@ -141,6 +149,7 @@ console.log(data[0].price);`,
     name: 'getCommodityOptionSpot',
     desc: '获取商品期权 T 型报价',
     category: 'options',
+    market: ['options'],
     params: [
       {
         key: 'variety',
@@ -162,6 +171,7 @@ console.log(t.calls[0].code);   // 合约代码`,
     name: 'getCommodityOptionKline',
     desc: '获取商品期权合约日 K 线',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'symbol', label: '合约代码', type: 'text', default: 'm2509C3200', required: true, placeholder: '如 m2509C3200' },
     ],
@@ -174,6 +184,7 @@ console.log(klines[0].close);  // 收盘价`,
     name: 'getOptionLHB',
     desc: '获取期权龙虎榜',
     category: 'options',
+    market: ['options'],
     params: [
       { key: 'symbol', label: '标的代码', type: 'text', default: '510050', required: true, placeholder: '如 510050' },
       { key: 'date', label: '交易日期', type: 'date', default: '2022-01-21', required: true },

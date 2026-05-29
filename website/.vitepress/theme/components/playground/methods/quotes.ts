@@ -6,6 +6,7 @@ export const quotesMethods: MethodSpec[] = [
     name: 'getFullQuotes',
     desc: '获取 A 股/指数全量行情',
     category: 'quotes',
+    market: ['a'],
     params: [
       {
         key: 'codes',
@@ -26,6 +27,7 @@ console.log(quotes[0].price);  // 111.70`,
     name: 'getSimpleQuotes',
     desc: '获取简要行情',
     category: 'quotes',
+    market: ['a'],
     params: [
       {
         key: 'codes',
@@ -45,6 +47,7 @@ console.log(quotes[0].name);  // 五 粮 液`,
     name: 'getHKQuotes',
     desc: '获取港股行情',
     category: 'quotes',
+    market: ['hk'],
     params: [
       {
         key: 'codes',
@@ -64,6 +67,7 @@ console.log(quotes[0].name);  // 阿里巴巴-W`,
     name: 'getUSQuotes',
     desc: '获取美股行情',
     category: 'quotes',
+    market: ['us'],
     params: [
       {
         key: 'codes',
@@ -83,6 +87,7 @@ console.log(quotes[0].code);  // BABA.N`,
     name: 'getFundQuotes',
     desc: '获取公募基金行情',
     category: 'quotes',
+    market: ['fund'],
     params: [
       {
         key: 'codes',

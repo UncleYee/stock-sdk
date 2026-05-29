@@ -40,7 +40,8 @@ export const marketEventMethods: MethodSpec[] = [
   {
     name: 'getZTPool',
     desc: '获取涨停 / 跌停 / 强势 等股池',
-    category: 'extended',
+    category: 'marketEvent',
+    market: ['a'],
     params: [
       { key: 'type', label: '池子类型', type: 'select', default: 'zt', options: ZT_POOL_TYPE_OPTIONS },
       { key: 'date', label: '交易日', type: 'date', default: '', placeholder: '默认今天' },
@@ -57,7 +58,8 @@ console.log(pool[0]?.continuousBoardCount);     // 连板数`;
   {
     name: 'getStockChanges',
     desc: '盘口异动（共 22 种类型）',
-    category: 'extended',
+    category: 'marketEvent',
+    market: ['a'],
     params: [
       { key: 'type', label: '异动类型', type: 'select', default: 'large_buy', options: STOCK_CHANGE_TYPE_OPTIONS },
     ],
@@ -70,7 +72,8 @@ console.log(changes[0]?.changeTypeLabel); // 中文异动类型`,
   {
     name: 'getBoardChanges',
     desc: '当日板块异动详情',
-    category: 'extended',
+    category: 'marketEvent',
+    market: ['board'],
     params: [],
     code: () => `const boards = await sdk.getBoardChanges();
 console.log(boards.length);              // 异动板块数

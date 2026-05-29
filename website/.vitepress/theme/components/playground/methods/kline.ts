@@ -40,6 +40,7 @@ export const klineMethods: MethodSpec[] = [
     name: 'getHistoryKline',
     desc: '获取 A 股历史 K 线',
     category: 'kline',
+    market: ['a'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: 'sz000001', required: true, placeholder: '如 sz000001' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -56,6 +57,7 @@ console.log(klines[0].close);  // 收盘价`,
     name: 'getHKHistoryKline',
     desc: '获取港股历史 K 线',
     category: 'kline',
+    market: ['hk'],
     params: [
       { key: 'symbol', label: '港股代码', type: 'text', default: '00700', required: true, placeholder: '如 00700' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -72,6 +74,7 @@ console.log(klines[0].close);  // 收盘价`,
     name: 'getUSHistoryKline',
     desc: '获取美股历史 K 线',
     category: 'kline',
+    market: ['us'],
     params: [
       { key: 'symbol', label: '美股代码', type: 'text', default: '105.MSFT', required: true, placeholder: '如 105.MSFT' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -89,6 +92,7 @@ console.log(klines[0].close);  // 收盘价`,
     name: 'getMinuteKline',
     desc: '获取分钟 K 线/分时',
     category: 'kline',
+    market: ['a'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: 'sz000001', required: true, placeholder: '如 sz000001' },
       {
@@ -118,6 +122,7 @@ console.log(klines[0].time);  // '2024-12-17 09:35'`,
     name: 'getTodayTimeline',
     desc: '获取当日分时走势',
     category: 'kline',
+    market: ['a'],
     params: [
       { key: 'code', label: '股票代码', type: 'text', default: 'sz000001', required: true, placeholder: '如 sz000001' },
     ],
@@ -132,6 +137,7 @@ console.log(timeline.data[0].avgPrice);  // 均价`,
     name: 'getHKMinuteKline',
     desc: '获取港股分钟 K 线或当日分时（v1.10.0+）',
     category: 'kline',
+    market: ['hk'],
     params: [
       { key: 'symbol', label: '港股代码', type: 'text', default: '00700', required: true, placeholder: '如 00700 或 hk00700' },
       {
@@ -163,6 +169,7 @@ console.log(klines[0].tz);        // 'Asia/Hong_Kong'`,
     name: 'getUSMinuteKline',
     desc: '获取美股分钟 K 线或当日分时（v1.10.0+，仅常规交易时段）',
     category: 'kline',
+    market: ['us'],
     params: [
       { key: 'symbol', label: '美股代码', type: 'text', default: '105.AAPL', required: true, placeholder: '格式 {market}.{ticker}，如 105.AAPL' },
       {

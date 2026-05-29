@@ -5,17 +5,49 @@
  * 完全消除原 Playground.vue 中长达 400 行的 dispatcher switch。
  */
 
+/**
+ * 分类 key —— 决定方法在侧边栏归属于哪一组（按"数据类别"分）。
+ *
+ * 注意：v1.10.x playground UI 改版时把原 `extended` 大杂烩拆成了多个细分类。
+ * 旧的 `extended` 仍保留，但只承载真正杂项（交易日历、单股资金流概览等 4 个）。
+ */
 export type CategoryKey =
   | 'quotes'
   | 'kline'
-  | 'board'
   | 'indicator'
-  | 'search'
-  | 'batch'
+  | 'fundFlow'
+  | 'northbound'
+  | 'marketEvent'
+  | 'dragonTiger'
+  | 'blockTradeMargin'
+  | 'board'
+  | 'fund'
   | 'futures'
   | 'options'
-  | 'extended'
-  | 'fund';
+  | 'batch'
+  | 'search'
+  | 'extended';
+
+/**
+ * 市场 key —— 与"数据类别"正交的另一维标签，用于侧边栏的市场过滤芯片。
+ *
+ * - `a` / `hk` / `us`：A 股 / 港股 / 美股个股（含指数、ETF 等具体标的）
+ * - `fund`：公募基金（开放式 / ETF / LOF）
+ * - `futures`：期货（国内商品 / 股指 / 全球商品）
+ * - `options`：期权（股指期权 / ETF 期权 / 商品期权）
+ * - `board`：板块（行业 / 概念 / 地域）
+ * - `all`：与具体市场无关的通用工具（如交易日历、search）。
+ *   选任何一个具体市场芯片时，标 `all` 的方法依然会被显示，以免它们被过滤掉。
+ */
+export type MarketKey =
+  | 'a'
+  | 'hk'
+  | 'us'
+  | 'fund'
+  | 'futures'
+  | 'options'
+  | 'board'
+  | 'all';
 
 export interface ParamSelectOption {
   value: string;
@@ -52,6 +84,16 @@ export interface MethodSpec {
   /** 一行人话描述，显示在标题旁 */
   desc: string;
   category: CategoryKey;
+  /**
+   * 该方法面向哪些市场。允许多个（如 `getKlineWithIndicators` 跨 A/HK/US 三市）。
+   * 用于侧边栏的市场过滤芯片：选 A 股芯片时，只显示数组含 `'a'` 或 `'all'` 的方法。
+   *
+   * 设计原则：
+   * - 只标"调用这个接口实际查询的市场"，不要标"理论上能跑的市场"
+   * - 通用工具（交易日历、search）用 `['all']`，永远会被显示
+   * - 多市场方法显式列出（如 `['a', 'hk', 'us']`），不要用 `'all'` 偷懒
+   */
+  market: MarketKey[];
   /** 表单参数定义 */
   params: ParamSpec[];
   /**
@@ -78,4 +120,17 @@ export interface CategorySpec {
   icon: string;
   /** 分类强调色 */
   color: string;
+}
+
+/**
+ * 市场过滤芯片定义（侧边栏顶部）。
+ *
+ * `key: null` 表示"不过滤"。其余 key 与 MethodSpec.market 数组做交集判断。
+ */
+export interface MarketChipSpec {
+  /** `null` = 不过滤；其余为具体市场 */
+  key: MarketKey | null;
+  label: string;
+  /** 短标签，窄屏下显示（如有） */
+  shortLabel?: string;
 }

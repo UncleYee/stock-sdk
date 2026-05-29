@@ -14,7 +14,8 @@ export const blockTradeMarginMethods: MethodSpec[] = [
   {
     name: 'getBlockTradeMarketStat',
     desc: '大宗交易市场每日总览',
-    category: 'extended',
+    category: 'blockTradeMargin',
+    market: ['a'],
     params: [],
     code: () => `const stat = await sdk.getBlockTradeMarketStat();
 console.log(stat.length);
@@ -26,7 +27,8 @@ console.log(stat[0]?.premiumRatio);        // 溢价占比`,
   {
     name: 'getBlockTradeDetail',
     desc: '大宗交易明细（按日期范围）',
-    category: 'extended',
+    category: 'blockTradeMargin',
+    market: ['a'],
     params: [
       { key: 'startDate', label: '开始日期', type: 'date', default: '2024-01-01' },
       { key: 'endDate', label: '结束日期', type: 'date', default: '2024-01-31' },
@@ -44,7 +46,8 @@ console.log(detail[0]?.buyBranch);      // 买方营业部`;
   {
     name: 'getBlockTradeDailyStat',
     desc: '大宗交易每日统计（按股票汇总）',
-    category: 'extended',
+    category: 'blockTradeMargin',
+    market: ['a'],
     params: [
       { key: 'startDate', label: '开始日期', type: 'date', default: '2024-01-01' },
       { key: 'endDate', label: '结束日期', type: 'date', default: '2024-01-31' },
@@ -62,7 +65,8 @@ console.log(stat[0]?.dealTotalAmount);`;
   {
     name: 'getMarginAccountInfo',
     desc: '融资融券账户统计',
-    category: 'extended',
+    category: 'blockTradeMargin',
+    market: ['a'],
     params: [],
     code: () => `const margin = await sdk.getMarginAccountInfo();
 console.log(margin.length);
@@ -73,7 +77,8 @@ console.log(margin[0]?.avgGuaranteeRatio);   // 维保比例(%)`,
   {
     name: 'getMarginTargetList',
     desc: '融资融券标的明细',
-    category: 'extended',
+    category: 'blockTradeMargin',
+    market: ['a'],
     params: [
       { key: 'date', label: '交易日', type: 'date', default: '', placeholder: '默认服务端最新交易日' },
     ],

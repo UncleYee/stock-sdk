@@ -18,7 +18,8 @@ export const northboundMethods: MethodSpec[] = [
   {
     name: 'getNorthboundMinute',
     desc: '北向 / 南向资金分时数据',
-    category: 'extended',
+    category: 'northbound',
+    market: ['a'],
     params: [
       { key: 'direction', label: '方向', type: 'select', default: 'north', options: NORTHBOUND_DIRECTION_OPTIONS },
     ],
@@ -30,7 +31,8 @@ console.log(points.at(-1)?.totalNetInflow);   // 最新合计净流入(万元)`,
   {
     name: 'getNorthboundFlowSummary',
     desc: '沪深港通市场资金流向汇总',
-    category: 'extended',
+    category: 'northbound',
+    market: ['a'],
     params: [],
     code: () => `const summary = await sdk.getNorthboundFlowSummary();
 console.log(summary.length);   // 通常 4 行（北向沪/深 + 南向沪/深）
@@ -42,7 +44,8 @@ summary.forEach(s => {
   {
     name: 'getNorthboundHoldingRank',
     desc: '北向 / 沪股通 / 深股通持股个股排行',
-    category: 'extended',
+    category: 'northbound',
+    market: ['a'],
     params: [
       {
         key: 'market',
@@ -73,7 +76,8 @@ console.log(rank[0]?.holdMarketValue);   // 持股市值(元)`,
   {
     name: 'getNorthboundHistory',
     desc: '北向 / 南向资金按日历史',
-    category: 'extended',
+    category: 'northbound',
+    market: ['a'],
     params: [
       { key: 'direction', label: '方向', type: 'select', default: 'north', options: NORTHBOUND_DIRECTION_OPTIONS },
       { key: 'startDate', label: '开始日期', type: 'date', default: '' },
@@ -91,7 +95,8 @@ console.log(history[0]?.netBuyAmount);`;
   {
     name: 'getNorthboundIndividual',
     desc: '个股的北向持仓历史',
-    category: 'extended',
+    category: 'northbound',
+    market: ['a'],
     params: [
       { key: 'symbol', label: '股票代码', type: 'text', default: '600519', required: true, placeholder: '如 600519 或 sh600519' },
       { key: 'startDate', label: '开始日期', type: 'date', default: '' },

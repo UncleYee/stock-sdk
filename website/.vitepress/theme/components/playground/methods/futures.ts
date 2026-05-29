@@ -33,6 +33,7 @@ export const futuresMethods: MethodSpec[] = [
     name: 'getFuturesKline',
     desc: '获取国内期货历史 K 线',
     category: 'futures',
+    market: ['futures'],
     params: [
       { key: 'symbol', label: '合约代码', type: 'text', default: 'RBM', required: true, placeholder: '如 RBM(主连), rb2510(具体合约)' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -49,6 +50,7 @@ console.log(klines[0].openInterest);  // 持仓量`,
     name: 'getGlobalFuturesSpot',
     desc: '获取全球期货实时行情',
     category: 'futures',
+    market: ['futures'],
     params: [],
     code: () => `const quotes = await sdk.getGlobalFuturesSpot();
 // 返回 600+ 个国际期货品种
@@ -62,6 +64,7 @@ console.log(quotes[0].changePercent);  // 涨跌幅%`,
     name: 'getGlobalFuturesKline',
     desc: '获取全球期货历史 K 线',
     category: 'futures',
+    market: ['futures'],
     params: [
       { key: 'symbol', label: '合约代码', type: 'text', default: 'HG00Y', required: true, placeholder: '如 HG00Y(COMEX铜), CL00Y(原油)' },
       { key: 'period', label: 'K线周期', type: 'select', default: 'daily', options: KLINE_PERIOD_OPTIONS },
@@ -79,6 +82,7 @@ console.log(klines[0].openInterest);  // 持仓量`,
     name: 'getFuturesInventorySymbols',
     desc: '获取期货库存品种列表',
     category: 'futures',
+    market: ['futures'],
     params: [],
     code: () => `const symbols = await sdk.getFuturesInventorySymbols();
 console.log(symbols[0].code);  // 品种代码
@@ -89,6 +93,7 @@ console.log(symbols[0].name);  // 品种名称`,
     name: 'getFuturesInventory',
     desc: '获取期货库存数据',
     category: 'futures',
+    market: ['futures'],
     params: [
       { key: 'symbol', label: '品种代码', type: 'text', default: 'RB', required: true, placeholder: '大写，如 RB, AG, CU' },
       { key: 'startDate', label: '开始日期', type: 'date', default: '2024-01-01' },
@@ -110,6 +115,7 @@ console.log(inventory[0].change);     // 增减`;
     name: 'getComexInventory',
     desc: '获取 COMEX 黄金/白银库存',
     category: 'futures',
+    market: ['futures'],
     params: [
       {
         key: 'symbol',

@@ -5,9 +5,9 @@ import { Icon } from '@iconify/vue'
 import { codeToHtml } from 'shiki'
 
 // === 拆分到 ./playground/* 的方法元数据与执行逻辑 ===
-import { categories } from './playground/categories'
+import { categories, marketChips } from './playground/categories'
 import { allMethods, methodsByName } from './playground/methods'
-import type { MethodSpec } from './playground/types'
+import type { MethodSpec, CategoryKey, MarketKey } from './playground/types'
 
 // VitePress 主题状态
 const { isDark } = useData()
@@ -54,6 +54,77 @@ function resolveCode(spec: MethodSpec, params: Record<string, string>): string {
 const searchQuery = ref('')
 const searchInputRef = ref<HTMLInputElement | null>(null)
 
+// === 市场过滤芯片 ===
+// null = 全部；其它 key 与 method.market 数组做交集判断
+const selectedMarket = ref<MarketKey | null>(null)
+
+function selectMarket(key: MarketKey | null) {
+  selectedMarket.value = key
+}
+
+// === 分类折叠状态（localStorage 持久化） ===
+// 设计：localStorage 只存"用户手动展开"的分类集合。
+// 实际是否展开还要叠加两条隐式规则：
+//   1) 有任何过滤（搜索 / 市场芯片）时强制全部展开 —— 否则结果藏在折叠区里反而看不到
+//   2) currentMethod 所在分类强制展开 —— 防止刷新后看不到当前选中的方法
+const EXPANDED_STORAGE_KEY = 'stock-sdk-playground-expanded-v1'
+
+function loadExpandedCategories(): Set<CategoryKey> {
+  if (typeof localStorage === 'undefined') return new Set()
+  try {
+    const raw = localStorage.getItem(EXPANDED_STORAGE_KEY)
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw) as CategoryKey[]
+    return new Set(arr)
+  } catch {
+    return new Set()
+  }
+}
+
+const expandedCategories = ref<Set<CategoryKey>>(loadExpandedCategories())
+
+function persistExpandedCategories() {
+  try {
+    localStorage.setItem(
+      EXPANDED_STORAGE_KEY,
+      JSON.stringify(Array.from(expandedCategories.value))
+    )
+  } catch {
+    /* 隐私模式可能写不进去，忽略 */
+  }
+}
+
+function toggleCategory(key: CategoryKey) {
+  const next = new Set(expandedCategories.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedCategories.value = next
+  persistExpandedCategories()
+}
+
+/** 把某分类加入展开集合（如果尚未在）。用于"切换 method 时自动展开其所属分类"。 */
+function ensureCategoryExpanded(cat: CategoryKey | undefined) {
+  if (!cat || expandedCategories.value.has(cat)) return
+  const next = new Set(expandedCategories.value)
+  next.add(cat)
+  expandedCategories.value = next
+  persistExpandedCategories()
+}
+
+/**
+ * 当前分类是否展开。优先级：
+ *   过滤激活（搜索 / 市场芯片） → 强制 true（否则结果藏在折叠区里）
+ *   其它 → 取决于 expandedCategories（localStorage 持久化 + 切换 method 时自动 add）
+ *
+ * 注意：current method 所在分类不在这里强制 true —— 改用下面的 watcher 在
+ * method 切换时把它 add 进 expandedCategories。这样用户仍可手动折叠当前分类
+ * （否则点了 chevron 没反应，UX 很怪）。
+ */
+function isCategoryOpen(key: CategoryKey): boolean {
+  if (searchQuery.value.trim() || selectedMarket.value !== null) return true
+  return expandedCategories.value.has(key)
+}
+
 /** 不带过滤的全量分组（按分类聚合 method 名） */
 const methodsByCategory = computed(() => {
   const grouped: Record<string, string[]> = {}
@@ -64,20 +135,32 @@ const methodsByCategory = computed(() => {
   return grouped
 })
 
-/** 带过滤的分组（搜索框为空时返回全量），用于侧边栏渲染 */
+/**
+ * 带过滤的分组（搜索 + 市场芯片），用于侧边栏渲染。
+ * 两个过滤维度按 AND 组合：搜索匹配名/描述，市场匹配 method.market 数组（含 'all' 总是匹配）。
+ */
 const filteredByCategory = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
-  if (!q) return methodsByCategory.value
+  const market = selectedMarket.value
+  if (!q && !market) return methodsByCategory.value
 
   const result: Record<string, string[]> = {}
   for (const [cat, names] of Object.entries(methodsByCategory.value)) {
     const matches = names.filter((name) => {
       const m = methodsConfig[name]
       if (!m) return false
-      return (
+      // 关键词过滤
+      if (q && !(
         m.name.toLowerCase().includes(q) ||
         m.desc.toLowerCase().includes(q)
-      )
+      )) {
+        return false
+      }
+      // 市场过滤：方法的 market 数组中含选中市场 或 含 'all' 视为通用工具
+      if (market && !m.market?.some((x) => x === market || x === 'all')) {
+        return false
+      }
+      return true
     })
     if (matches.length > 0) result[cat] = matches
   }
@@ -363,6 +446,11 @@ onMounted(async () => {
     initParams()
   }
 
+  // 初始化展开状态：把当前 method 所在分类加入展开集合（如果还没在）。
+  // 见上面 watch(currentConfig.category) 的注释：刻意不在 watch 里用 immediate=true，
+  // 而是在这里 hash 解析完成后调一次，避免被默认 currentMethod 干扰。
+  ensureCategoryExpanded(currentConfig.value?.category)
+
   try {
     // loadSDK 内部已经 attach 到 window.sdk
     sdk.value = await loadSDK()
@@ -405,6 +493,18 @@ watch(
   [currentMethod, paramValues],
   () => writeHash(),
   { deep: true, flush: 'post' }
+)
+
+// 方法切换 → 自动把它所在分类加入展开集合。
+// 这里不直接 force-expand，而是把分类 add 进 expandedCategories 让其参与持久化，
+// 之后用户可以手动折叠它（即便它是 current method 所在分类）。
+//
+// 注意：不用 immediate=true。初始加载时 currentMethod 可能被 onMounted 里的 parseHash
+// 改写一次；用 immediate=true 会先以默认值 (getFullQuotes/quotes) 触发一次再以
+// hash 值触发一次，结果把不相关的 quotes 也展开了。改用 onMounted 里手动调一次。
+watch(
+  () => currentConfig.value?.category,
+  (cat) => ensureCategoryExpanded(cat)
 )
 
 // === 复制结果到剪贴板 ===
@@ -520,20 +620,41 @@ onUnmounted(() => {
             @click="searchQuery = ''"
           >×</button>
         </div>
+        <div class="market-chips" role="tablist" aria-label="按市场过滤">
+          <button
+            v-for="chip in marketChips"
+            :key="chip.key ?? '_all'"
+            type="button"
+            class="market-chip"
+            :class="{ active: selectedMarket === chip.key }"
+            :title="chip.key === null ? '显示全部方法' : `只看与「${chip.label}」相关的方法`"
+            role="tab"
+            :aria-selected="selectedMarket === chip.key"
+            @click="selectMarket(chip.key)"
+          >{{ chip.label }}</button>
+        </div>
         <nav class="method-nav">
           <div
             v-for="cat in categories"
             v-show="(filteredByCategory[cat.key]?.length ?? 0) > 0"
             :key="cat.key"
             class="category"
+            :class="{ collapsed: !isCategoryOpen(cat.key) }"
           >
-            <div class="category-header">
+            <button
+              type="button"
+              class="category-header"
+              :aria-expanded="isCategoryOpen(cat.key)"
+              @click="toggleCategory(cat.key)"
+            >
+              <Icon icon="lucide:chevron-right" class="category-chevron" />
               <span class="category-icon" :style="{ color: cat.color }">
                 <Icon :icon="cat.icon" />
               </span>
               <span class="category-label">{{ cat.label }}</span>
-            </div>
-            <div class="category-methods">
+              <span class="category-count">{{ filteredByCategory[cat.key]?.length ?? 0 }}</span>
+            </button>
+            <div v-show="isCategoryOpen(cat.key)" class="category-methods">
               <button
                 v-for="method in filteredByCategory[cat.key]"
                 :key="method"
@@ -541,12 +662,13 @@ onUnmounted(() => {
                 :class="{ active: currentMethod === method }"
                 @click="selectMethod(method)"
               >
-                {{ methodsConfig[method].name }}
+                <span class="method-name">{{ methodsConfig[method].name }}</span>
+                <span class="method-desc">{{ methodsConfig[method].desc }}</span>
               </button>
             </div>
           </div>
-          <div v-if="searchQuery && visibleMethodCount === 0" class="search-empty">
-            没有匹配 "{{ searchQuery }}" 的方法
+          <div v-if="(searchQuery || selectedMarket !== null) && visibleMethodCount === 0" class="search-empty">
+            没有符合条件的方法
           </div>
         </nav>
       </aside>
@@ -850,7 +972,7 @@ onUnmounted(() => {
 
 /* Sidebar */
 .sidebar {
-  width: 260px;
+  width: 280px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -923,43 +1045,95 @@ onUnmounted(() => {
 
 
 .category {
-  margin-bottom: 16px;
+  margin-bottom: 4px;
 }
 
+/* === Category header（按钮式，可点击折叠 / 展开） === */
 .category-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 0.8rem;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 0.82rem;
   font-weight: 600;
+  text-align: left;
   color: var(--pg-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.category-header:hover {
+  background: var(--pg-surface-hover);
+  color: var(--pg-text);
+}
+
+.category-chevron {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  font-size: 14px;
+  color: var(--pg-text-muted);
+  transition: transform 0.2s ease;
+}
+.category:not(.collapsed) .category-chevron {
+  transform: rotate(90deg);
 }
 
 .category-icon {
-  font-size: 1.25rem;
-  display: flex;
+  flex-shrink: 0;
+  font-size: 1.15rem;
+  display: inline-flex;
   align-items: center;
+}
+
+.category-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-count {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  background: var(--pg-surface-hover);
+  color: var(--pg-text-muted);
+  border-radius: 999px;
+  letter-spacing: 0;
+}
+.category-header:hover .category-count,
+.category:not(.collapsed) .category-count {
+  color: var(--pg-text-secondary);
 }
 
 .category-methods {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
+  padding: 2px 0 8px;
 }
 
+/* === Method item — 两行卡片（方法名 + 一行描述） === */
 .method-item {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   width: 100%;
-  padding: 10px 12px 10px 36px;
+  padding: 7px 10px 7px 28px;
+  margin-left: 6px;
   text-align: left;
-  font-size: 0.875rem;
-  color: var(--pg-text);
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-left: 2px solid transparent;
+  border-radius: 0 8px 8px 0;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .method-item:hover {
@@ -968,8 +1142,36 @@ onUnmounted(() => {
 
 .method-item.active {
   background: var(--pg-accent-soft);
-  color: var(--pg-accent);
+  border-left-color: var(--pg-accent);
+}
+
+.method-name {
+  font-size: 0.82rem;
   font-weight: 500;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+  color: var(--pg-text);
+  line-height: 1.3;
+  /* 方法名通常不会超出，但保护一下 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.method-item.active .method-name {
+  color: var(--pg-accent);
+  font-weight: 600;
+}
+
+.method-desc {
+  font-size: 0.72rem;
+  color: var(--pg-text-muted);
+  line-height: 1.35;
+  /* 描述较长时截断成单行，省略号；hover 仍可看到 tooltip（title 属性可选） */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.method-item:hover .method-desc {
+  color: var(--pg-text-secondary);
 }
 
 /* Main Content */
@@ -1236,6 +1438,44 @@ onUnmounted(() => {
   color: var(--pg-text-muted);
 }
 
+/* === 市场过滤芯片（搜索框下方一排可点击 pill） === */
+.market-chips {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 12px 8px;
+  border-bottom: 1px solid var(--pg-border);
+}
+
+.market-chip {
+  padding: 3px 9px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--pg-text-secondary);
+  background: transparent;
+  border: 1px solid var(--pg-border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  white-space: nowrap;
+}
+.market-chip:hover {
+  border-color: var(--pg-accent);
+  color: var(--pg-accent);
+}
+.market-chip.active {
+  background: var(--pg-accent);
+  border-color: var(--pg-accent);
+  color: white;
+}
+.market-chip.active:hover {
+  /* 已选中时禁用 hover 反色，否则看起来像 disabled */
+  color: white;
+}
+
 /* === 复制按钮 === */
 .btn-copy {
   display: inline-flex;
@@ -1393,28 +1633,21 @@ onUnmounted(() => {
   }
 
   .sidebar {
+    /* 桌面外的中等屏：sidebar 横铺顶部，限制高度避免占满整屏 */
     width: 100%;
     height: auto;
+    max-height: 50vh;
     border-right: none;
     border-bottom: 1px solid var(--pg-border);
   }
 
   .method-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 12px;
-    overflow-y: visible;
+    overflow-y: auto;
   }
 
   .main-content {
     height: auto;
     overflow-y: visible;
-  }
-
-  .category {
-    flex: 1;
-    min-width: 200px;
   }
 
   .params-grid {

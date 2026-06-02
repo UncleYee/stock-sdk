@@ -481,6 +481,18 @@ export default defineConfig({
         // 允许访问上级目录（用于引用 src）
         allow: ['../..'],
       },
+      // 本地开发反向代理:把 /api/llm/* 转发到本地运行的 api-worker(文档问答 agent)。
+      // ⚠️ 只代理 /api/llm,绝不能用 /api —— 因为本站的 API 文档页就在 /api/* 路径下
+      //    (如 /api/kline、/api/quotes),用 /api 会把文档页也代理走导致 404。
+      // 默认指向 localhost:8788(EdgeOne `edgeone pages dev` 默认端口);
+      // 端口不同可用环境变量覆盖:API_WORKER_ORIGIN=http://localhost:8790 yarn dev
+      // 注:agent 已改为 SSE(普通 HTTP 流式响应),无需 ws: true。
+      proxy: {
+        '/api/llm': {
+          target: process.env.API_WORKER_ORIGIN || 'http://localhost:8788',
+          changeOrigin: true,
+        },
+      },
     },
     build: {
       sourcemap: true,

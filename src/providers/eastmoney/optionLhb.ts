@@ -15,19 +15,6 @@ interface DatacenterResponse {
   code?: number;
 }
 
-function inferLegacySide(tradeType: string): 'buy' | 'sell' | 'net' | null {
-  if (tradeType.includes('净')) {
-    return 'net';
-  }
-  if (tradeType.includes('买')) {
-    return 'buy';
-  }
-  if (tradeType.includes('卖')) {
-    return 'sell';
-  }
-  return null;
-}
-
 /**
  * 获取期权龙虎榜
  * @param client - 请求客户端

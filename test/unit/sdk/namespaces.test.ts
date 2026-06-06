@@ -76,3 +76,13 @@ describe('namespace API — 与旧扁平方法委托一致', () => {
     expect(typeof sdk.getETFOptionDailyKline).toBe('function');
   });
 });
+
+describe('namespace API — 引用稳定(补a / TD §7.2)', () => {
+  it('同一命名空间多次访问返回同一引用(memoized，sdk.quotes === sdk.quotes)', () => {
+    expect(sdk.quotes).toBe(sdk.quotes);
+    expect(sdk.kline).toBe(sdk.kline);
+    expect(sdk.board).toBe(sdk.board);
+    expect(sdk.options).toBe(sdk.options);
+    expect(sdk.reference).toBe(sdk.reference);
+  });
+});

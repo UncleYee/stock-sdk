@@ -478,11 +478,10 @@ export class RequestClient {
           perCall.signal.reason !== TIMEOUT_ABORT_REASON) ||
         (this.clientSignal?.aborted &&
           this.clientSignal.reason !== TIMEOUT_ABORT_REASON);
-      if (
-        error instanceof DOMException &&
-        error.name === 'AbortError' &&
-        externalAborted
-      ) {
+      // undici 在连接被 abort 时抛 TypeError: terminated(真因在 error.cause),
+      // 这里不再要求 error 必须是 AbortError:只要外部 signal 已取消即归 ABORTED,
+      // 避免「用户主动取消」漏成 NETWORK_ERROR 被反复重试。
+      if (externalAborted) {
         throw new AbortedError(
           'Request aborted by external signal',
           provider,

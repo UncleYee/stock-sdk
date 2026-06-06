@@ -1,6 +1,7 @@
 /**
  * 选股器（v2 B2）—— 纯本地链式筛选，输入任意行情/数据数组，无网络。
  */
+import { InvalidArgumentError } from '../core/errors';
 
 export interface ScreenerBuilder<T> {
   /** 过滤：保留满足条件的项 */
@@ -50,7 +51,13 @@ export function screen<T>(items: readonly T[]): ScreenerBuilder<T> {
       return builder;
     },
     top(n) {
-      return current.slice(0, Math.max(0, n));
+      if (!Number.isInteger(n) || n < 0) {
+        throw new InvalidArgumentError(
+          `top(n): n must be a non-negative integer, got ${n}`,
+          { n }
+        );
+      }
+      return current.slice(0, n);
     },
     toArray() {
       return current.slice();

@@ -75,7 +75,7 @@ export function normalizeSymbol(
     assetType: AssetType,
     variety?: string
   ): NormalizedSymbol => ({
-    market: hintMarket ?? market,
+    market,
     exchange: hintExchange ?? exchange,
     assetType: hintAsset ?? assetType,
     code,

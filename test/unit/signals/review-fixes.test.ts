@@ -44,3 +44,35 @@ describe('#5 calcSignals MA 周期与指标周期不一致', () => {
     );
   });
 });
+
+describe('N2 calcSignals RSI 周期与指标周期不一致', () => {
+  function kr(ts: number, rsi: Record<string, number | null>): K {
+    return {
+      date: '',
+      timestamp: ts,
+      tz: 'Asia/Shanghai',
+      code: '',
+      open: null,
+      close: null,
+      high: null,
+      low: null,
+      volume: null,
+      amount: null,
+      amplitude: null,
+      changePercent: null,
+      change: null,
+      turnoverRate: null,
+      rsi,
+    } as K;
+  }
+
+  it('指标算 rsi14 但信号默认 period 6 → 报错（不再静默零信号）', () => {
+    const klines = [kr(1, { rsi14: 75 }), kr(2, { rsi14: 80 })];
+    expect(() => calcSignals(klines, { rsi: {} })).toThrow(InvalidArgumentError);
+  });
+
+  it('周期一致(rsi6)正常，不报错', () => {
+    const klines = [kr(1, { rsi6: 75 }), kr(2, { rsi6: 80 })];
+    expect(() => calcSignals(klines, { rsi: {} })).not.toThrow();
+  });
+});

@@ -41,6 +41,21 @@ export function calcSignals(klines: Kline[], options: SignalOptions = {}): Signa
     }
   }
 
+  // N2 同理：RSI 也是 period-keyed(rsi${period}，默认 6)，周期与指标不一致会静默零信号
+  if (options.rsi && klines.length > 0) {
+    const period = options.rsi.period ?? 6;
+    const hasRsiKey = klines.some(
+      (k) => k.rsi != null && k.rsi[`rsi${period}`] !== undefined
+    );
+    if (!hasRsiKey) {
+      throw new InvalidArgumentError(
+        `calcSignals: RSI period ${period} not found on klines — ` +
+          `ensure addIndicators computed rsi${period} (signal RSI period must match indicator period).`,
+        { period }
+      );
+    }
+  }
+
   for (let i = 1; i < klines.length; i++) {
     const prev = klines[i - 1];
     const cur = klines[i];

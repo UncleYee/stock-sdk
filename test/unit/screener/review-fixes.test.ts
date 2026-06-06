@@ -3,6 +3,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { screen, backtest, type Strategy } from '../../../src/screener';
+import { InvalidArgumentError } from '../../../src/core';
 
 describe('#4 sortBy 非有限值沉底', () => {
   const rows: { code: string; pe: number | null }[] = [
@@ -59,5 +60,21 @@ describe('#6 backtest 0 价 / NaN 处理', () => {
     expect(Number.isFinite(r.totalReturn)).toBe(true);
     expect(Number.isFinite(r.maxDrawdown)).toBe(true);
     expect(r.totalReturn).toBeCloseTo(20, 5);
+  });
+});
+
+describe('screener top(n) 参数校验(本轮新发现)', () => {
+  it('top(NaN) 抛 InvalidArgumentError', () => {
+    expect(() => screen([1, 2, 3]).top(NaN)).toThrow(InvalidArgumentError);
+  });
+
+  it('top(负数 / 小数) 抛 InvalidArgumentError', () => {
+    expect(() => screen([1, 2, 3]).top(-1)).toThrow(InvalidArgumentError);
+    expect(() => screen([1, 2, 3]).top(1.5)).toThrow(InvalidArgumentError);
+  });
+
+  it('top(非负整数) 正常返回', () => {
+    expect(screen([1, 2, 3]).top(2)).toEqual([1, 2]);
+    expect(screen([1, 2, 3]).top(0)).toEqual([]);
   });
 });

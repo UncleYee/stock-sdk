@@ -157,214 +157,251 @@ export class StockSDK {
   }
 
   // ===== v2 命名空间 API（委托现有 service；旧扁平方法仍保留以兼容）=====
+  // 命名空间懒构建一次并缓存：保证引用稳定（sdk.quotes === sdk.quotes，达成 TD §7.2 目标）
+  private readonly _ns: Record<string, unknown> = {};
+  private memoNs<T>(key: string, build: () => T): T {
+    return (this._ns[key] ??= build()) as T;
+  }
 
   /** 实时行情 */
   get quotes() {
-    const s = this.quoteService;
-    return {
-      cn: s.getFullQuotes.bind(s),
-      cnSimple: s.getSimpleQuotes.bind(s),
-      hk: s.getHKQuotes.bind(s),
-      us: s.getUSQuotes.bind(s),
-      fund: s.getFundQuotes.bind(s),
-      fundFlow: s.getFundFlow.bind(s),
-      largeOrder: s.getPanelLargeOrder.bind(s),
-      timeline: s.getTodayTimeline.bind(s),
-    };
+    return this.memoNs('quotes', () => {
+      const s = this.quoteService;
+      return {
+        cn: s.getFullQuotes.bind(s),
+        cnSimple: s.getSimpleQuotes.bind(s),
+        hk: s.getHKQuotes.bind(s),
+        us: s.getUSQuotes.bind(s),
+        fund: s.getFundQuotes.bind(s),
+        fundFlow: s.getFundFlow.bind(s),
+        largeOrder: s.getPanelLargeOrder.bind(s),
+        timeline: s.getTodayTimeline.bind(s),
+      };
+    });
   }
 
   /** 代码列表 */
   get codes() {
-    const s = this.quoteService;
-    return {
-      cn: s.getAShareCodeList.bind(s),
-      us: s.getUSCodeList.bind(s),
-      hk: s.getHKCodeList.bind(s),
-      fund: s.getFundCodeList.bind(s),
-    };
+    return this.memoNs('codes', () => {
+      const s = this.quoteService;
+      return {
+        cn: s.getAShareCodeList.bind(s),
+        us: s.getUSCodeList.bind(s),
+        hk: s.getHKCodeList.bind(s),
+        fund: s.getFundCodeList.bind(s),
+      };
+    });
   }
 
   /** 批量行情 */
   get batch() {
-    const s = this.quoteService;
-    return {
-      cn: s.getAllAShareQuotes.bind(s),
-      hk: s.getAllHKShareQuotes.bind(s),
-      us: s.getAllUSShareQuotes.bind(s),
-      byCodes: s.getAllQuotesByCodes.bind(s),
-      raw: s.batchRaw.bind(s),
-    };
+    return this.memoNs('batch', () => {
+      const s = this.quoteService;
+      return {
+        cn: s.getAllAShareQuotes.bind(s),
+        hk: s.getAllHKShareQuotes.bind(s),
+        us: s.getAllUSShareQuotes.bind(s),
+        byCodes: s.getAllQuotesByCodes.bind(s),
+        raw: s.batchRaw.bind(s),
+      };
+    });
   }
 
   /** K 线 / 分时 */
   get kline() {
-    const k = this.klineService;
-    const ind = this.indicatorService;
-    return {
-      cn: k.getHistoryKline.bind(k),
-      cnMinute: k.getMinuteKline.bind(k),
-      hk: k.getHKHistoryKline.bind(k),
-      hkMinute: k.getHKMinuteKline.bind(k),
-      us: k.getUSHistoryKline.bind(k),
-      usMinute: k.getUSMinuteKline.bind(k),
-      withIndicators: ind.getKlineWithIndicators.bind(ind),
-    };
+    return this.memoNs('kline', () => {
+      const k = this.klineService;
+      const ind = this.indicatorService;
+      return {
+        cn: k.getHistoryKline.bind(k),
+        cnMinute: k.getMinuteKline.bind(k),
+        hk: k.getHKHistoryKline.bind(k),
+        hkMinute: k.getHKMinuteKline.bind(k),
+        us: k.getUSHistoryKline.bind(k),
+        usMinute: k.getUSMinuteKline.bind(k),
+        withIndicators: ind.getKlineWithIndicators.bind(ind),
+      };
+    });
   }
 
   /** 板块（行业 / 概念） */
   get board() {
-    const b = this.boardService;
-    return {
-      industry: {
-        list: b.getIndustryList.bind(b),
-        spot: b.getIndustrySpot.bind(b),
-        constituents: b.getIndustryConstituents.bind(b),
-        kline: b.getIndustryKline.bind(b),
-        minuteKline: b.getIndustryMinuteKline.bind(b),
-      },
-      concept: {
-        list: b.getConceptList.bind(b),
-        spot: b.getConceptSpot.bind(b),
-        constituents: b.getConceptConstituents.bind(b),
-        kline: b.getConceptKline.bind(b),
-        minuteKline: b.getConceptMinuteKline.bind(b),
-      },
-    };
+    return this.memoNs('board', () => {
+      const b = this.boardService;
+      return {
+        industry: {
+          list: b.getIndustryList.bind(b),
+          spot: b.getIndustrySpot.bind(b),
+          constituents: b.getIndustryConstituents.bind(b),
+          kline: b.getIndustryKline.bind(b),
+          minuteKline: b.getIndustryMinuteKline.bind(b),
+        },
+        concept: {
+          list: b.getConceptList.bind(b),
+          spot: b.getConceptSpot.bind(b),
+          constituents: b.getConceptConstituents.bind(b),
+          kline: b.getConceptKline.bind(b),
+          minuteKline: b.getConceptMinuteKline.bind(b),
+        },
+      };
+    });
   }
 
   /** 期权 */
   get options() {
-    const o = this.optionsService;
-    return {
-      index: {
-        spot: o.getIndexOptionSpot.bind(o),
-        kline: o.getIndexOptionKline.bind(o),
-      },
-      etf: {
-        months: o.getETFOptionMonths.bind(o),
-        expireDay: o.getETFOptionExpireDay.bind(o),
-        minute: o.getETFOptionMinute.bind(o),
-        dailyKline: o.getETFOptionDailyKline.bind(o),
-        fiveDayMinute: o.getETFOption5DayMinute.bind(o),
-      },
-      commodity: {
-        spot: o.getCommodityOptionSpot.bind(o),
-        kline: o.getCommodityOptionKline.bind(o),
-      },
-      cffex: {
-        quotes: o.getCFFEXOptionQuotes.bind(o),
-      },
-      lhb: o.getOptionLHB.bind(o),
-    };
+    return this.memoNs('options', () => {
+      const o = this.optionsService;
+      return {
+        index: {
+          spot: o.getIndexOptionSpot.bind(o),
+          kline: o.getIndexOptionKline.bind(o),
+        },
+        etf: {
+          months: o.getETFOptionMonths.bind(o),
+          expireDay: o.getETFOptionExpireDay.bind(o),
+          minute: o.getETFOptionMinute.bind(o),
+          dailyKline: o.getETFOptionDailyKline.bind(o),
+          fiveDayMinute: o.getETFOption5DayMinute.bind(o),
+        },
+        commodity: {
+          spot: o.getCommodityOptionSpot.bind(o),
+          kline: o.getCommodityOptionKline.bind(o),
+        },
+        cffex: {
+          quotes: o.getCFFEXOptionQuotes.bind(o),
+        },
+        lhb: o.getOptionLHB.bind(o),
+      };
+    });
   }
 
   /** 期货 */
   get futures() {
-    const f = this.futuresService;
-    return {
-      kline: f.getFuturesKline.bind(f),
-      globalSpot: f.getGlobalFuturesSpot.bind(f),
-      globalKline: f.getGlobalFuturesKline.bind(f),
-      inventorySymbols: f.getFuturesInventorySymbols.bind(f),
-      inventory: f.getFuturesInventory.bind(f),
-      comexInventory: f.getComexInventory.bind(f),
-    };
+    return this.memoNs('futures', () => {
+      const f = this.futuresService;
+      return {
+        kline: f.getFuturesKline.bind(f),
+        globalSpot: f.getGlobalFuturesSpot.bind(f),
+        globalKline: f.getGlobalFuturesKline.bind(f),
+        inventorySymbols: f.getFuturesInventorySymbols.bind(f),
+        inventory: f.getFuturesInventory.bind(f),
+        comexInventory: f.getComexInventory.bind(f),
+      };
+    });
   }
 
   /** 资金流向（深度） */
   get fundFlow() {
-    const f = this.fundFlowService;
-    return {
-      individual: f.getIndividualFundFlow.bind(f),
-      market: f.getMarketFundFlow.bind(f),
-      rank: f.getFundFlowRank.bind(f),
-      sectorRank: f.getSectorFundFlowRank.bind(f),
-      sectorHistory: f.getSectorFundFlowHistory.bind(f),
-    };
+    return this.memoNs('fundFlow', () => {
+      const f = this.fundFlowService;
+      return {
+        individual: f.getIndividualFundFlow.bind(f),
+        market: f.getMarketFundFlow.bind(f),
+        rank: f.getFundFlowRank.bind(f),
+        sectorRank: f.getSectorFundFlowRank.bind(f),
+        sectorHistory: f.getSectorFundFlowHistory.bind(f),
+      };
+    });
   }
 
   /** 沪深港通 / 北向 */
   get northbound() {
-    const n = this.northboundService;
-    return {
-      minute: n.getNorthboundMinute.bind(n),
-      summary: n.getNorthboundFlowSummary.bind(n),
-      holdingRank: n.getNorthboundHoldingRank.bind(n),
-      history: n.getNorthboundHistory.bind(n),
-      individual: n.getNorthboundIndividual.bind(n),
-    };
+    return this.memoNs('northbound', () => {
+      const n = this.northboundService;
+      return {
+        minute: n.getNorthboundMinute.bind(n),
+        summary: n.getNorthboundFlowSummary.bind(n),
+        holdingRank: n.getNorthboundHoldingRank.bind(n),
+        history: n.getNorthboundHistory.bind(n),
+        individual: n.getNorthboundIndividual.bind(n),
+      };
+    });
   }
 
   /** 涨停 / 盘口异动 */
   get marketEvent() {
-    const m = this.marketEventService;
-    return {
-      ztPool: m.getZTPool.bind(m),
-      stockChanges: m.getStockChanges.bind(m),
-      boardChanges: m.getBoardChanges.bind(m),
-    };
+    return this.memoNs('marketEvent', () => {
+      const m = this.marketEventService;
+      return {
+        ztPool: m.getZTPool.bind(m),
+        stockChanges: m.getStockChanges.bind(m),
+        boardChanges: m.getBoardChanges.bind(m),
+      };
+    });
   }
 
   /** 龙虎榜 */
   get dragonTiger() {
-    const d = this.dragonTigerService;
-    return {
-      detail: d.getDragonTigerDetail.bind(d),
-      stockStats: d.getDragonTigerStockStats.bind(d),
-      institution: d.getDragonTigerInstitution.bind(d),
-      branchRank: d.getDragonTigerBranchRank.bind(d),
-      seatDetail: d.getDragonTigerStockSeatDetail.bind(d),
-    };
+    return this.memoNs('dragonTiger', () => {
+      const d = this.dragonTigerService;
+      return {
+        detail: d.getDragonTigerDetail.bind(d),
+        stockStats: d.getDragonTigerStockStats.bind(d),
+        institution: d.getDragonTigerInstitution.bind(d),
+        branchRank: d.getDragonTigerBranchRank.bind(d),
+        seatDetail: d.getDragonTigerStockSeatDetail.bind(d),
+      };
+    });
   }
 
   /** 大宗交易 */
   get blockTrade() {
-    const d = this.dataService;
-    return {
-      marketStat: d.getBlockTradeMarketStat.bind(d),
-      detail: d.getBlockTradeDetail.bind(d),
-      dailyStat: d.getBlockTradeDailyStat.bind(d),
-    };
+    return this.memoNs('blockTrade', () => {
+      const d = this.dataService;
+      return {
+        marketStat: d.getBlockTradeMarketStat.bind(d),
+        detail: d.getBlockTradeDetail.bind(d),
+        dailyStat: d.getBlockTradeDailyStat.bind(d),
+      };
+    });
   }
 
   /** 融资融券 */
   get margin() {
-    const d = this.dataService;
-    return {
-      accountInfo: d.getMarginAccountInfo.bind(d),
-      targetList: d.getMarginTargetList.bind(d),
-    };
+    return this.memoNs('margin', () => {
+      const d = this.dataService;
+      return {
+        accountInfo: d.getMarginAccountInfo.bind(d),
+        targetList: d.getMarginTargetList.bind(d),
+      };
+    });
   }
 
   /** 公募基金扩展 */
   get fund() {
-    const f = this.fundService;
-    return {
-      dividendList: f.getFundDividendList.bind(f),
-      navHistory: f.getFundNavHistory.bind(f),
-      estimate: f.getFundEstimate.bind(f),
-      rankHistory: f.getFundRankHistory.bind(f),
-    };
+    return this.memoNs('fund', () => {
+      const f = this.fundService;
+      return {
+        dividendList: f.getFundDividendList.bind(f),
+        navHistory: f.getFundNavHistory.bind(f),
+        estimate: f.getFundEstimate.bind(f),
+        rankHistory: f.getFundRankHistory.bind(f),
+      };
+    });
   }
 
   /** 交易日历 / 市场状态 */
   get calendar() {
-    const c = this.tradingCalendarService;
-    return {
-      isTradingDay: c.isTradingDay.bind(c),
-      nextTradingDay: c.nextTradingDay.bind(c),
-      prevTradingDay: c.prevTradingDay.bind(c),
-      marketStatus: c.getMarketStatus.bind(c),
-    };
+    return this.memoNs('calendar', () => {
+      const c = this.tradingCalendarService;
+      return {
+        isTradingDay: c.isTradingDay.bind(c),
+        nextTradingDay: c.nextTradingDay.bind(c),
+        prevTradingDay: c.prevTradingDay.bind(c),
+        marketStatus: c.getMarketStatus.bind(c),
+      };
+    });
   }
 
   /** 参考数据（分红 / 交易日历原始数组） */
   get reference() {
-    const s = this.quoteService;
-    return {
-      dividendDetail: s.getDividendDetail.bind(s),
-      tradingCalendar: s.getTradingCalendar.bind(s),
-    };
+    return this.memoNs('reference', () => {
+      const s = this.quoteService;
+      return {
+        dividendDetail: s.getDividendDetail.bind(s),
+        tradingCalendar: s.getTradingCalendar.bind(s),
+      };
+    });
   }
 
   /**
@@ -750,7 +787,7 @@ export class StockSDK {
    * 如果 `date` 本身是交易日,返回它**之后**的下一个;否则返回大于它的第一个交易日。
    *
    * @param date 不传则取"现在 `Asia/Shanghai` 的当日"
-   * @throws RangeError 当 `date` 已超过日历范围时
+   * @throws {InvalidArgumentError} 当 `date` 已超过日历范围时
    */
   nextTradingDay(date?: string | Date): Promise<string> {
     return this.tradingCalendarService.nextTradingDay(date);
@@ -762,7 +799,7 @@ export class StockSDK {
    * 如果 `date` 本身是交易日,返回它**之前**的上一个;否则返回小于它的最后一个交易日。
    *
    * @param date 不传则取"现在 `Asia/Shanghai` 的当日"
-   * @throws RangeError 当 `date` 早于日历最早日期时
+   * @throws {InvalidArgumentError} 当 `date` 早于日历最早日期时
    */
   prevTradingDay(date?: string | Date): Promise<string> {
     return this.tradingCalendarService.prevTradingDay(date);

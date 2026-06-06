@@ -67,6 +67,8 @@
 | D5 | **不提供 compat 兼容入口** | 单轨硬切 |
 | D6 | **单位统一最小单位 + 原生币种** | `volume`→**股**；`amount`/`price`/市值→**该标的计价货币的主单位**（由 `currency` 决定：A股=人民币元 / 港股=港元 / 美股=美元），**不跨币种折算** |
 
+> ⚠️ **D6 实施状态（本期暂缓，TODO）**：单位换算（`volume`→股、`amount`→主单位等 ×100 / ×10000 折算）**本期未实现**——各 provider 仍输出数据源原始口径（如腾讯 A 股 `volume`=手、`amount`=万元）。原因：正确的换算倍率必须用**真实数据**逐源逐字段核对，纯单测（mock 数据自证）无法验证换算是否正确，盲改有引入错误数值、跨源口径不一致的风险。**TODO**：留到能跑集成测试（真实数据）的阶段统一校准后再落地；在此之前，下方数据契约里 `volume` / `amount` 的单位注释表示「**目标口径**」，实际运行值以各源原始口径为准。
+
 ---
 
 ## 4. 总体架构
@@ -254,8 +256,8 @@ export interface BaseQuote extends BaseRecord, TimedRecord {
   low: number;
   change: number;
   changePercent: number; // 百分数
-  volume: number;        // 股
-  amount: number;        // 计价货币主单位(同 currency)
+  volume: number;        // 目标口径:股(TODO 本期未换算,实际为各源原始口径,如腾讯 A股=手)
+  amount: number;        // 目标口径:计价货币主单位(TODO 同上,实际如腾讯 A股=万元)
 }
 ```
 

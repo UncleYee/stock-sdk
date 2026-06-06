@@ -58,3 +58,12 @@ describe('#14 adapters 按 assetType 分类，未知组合抛错而非静默兜�
     expect(() => toEastmoneySecid(gc)).toThrow(InvalidArgumentError);
   });
 });
+
+describe('N1 finish 的 market 不再与 exchange 脱节', () => {
+  it('AAPL + {market:CN} 不产生 {market:CN, exchange:US} 矛盾组合', () => {
+    const ns = normalizeSymbol('AAPL', { market: 'CN' });
+    // 撤销 market 单独覆盖后，market 与 exchange 同源、一致(按 symbol 本身解析为美股)
+    expect(ns.market).toBe('US');
+    expect(ns.exchange).toBe('US');
+  });
+});

@@ -30,8 +30,8 @@ export type MarketTz = (typeof MARKET_TZ)[keyof typeof MARKET_TZ];
  * 时间元信息:与原始 `time`/`date` 字符串配套使用。
  */
 export interface TimeMeta {
-  /** UTC unix 毫秒时间戳。原始字符串无法解析时为 `NaN`。 */
-  timestamp: number;
+  /** UTC unix 毫秒时间戳。原始字符串无法解析时为 `null`。 */
+  timestamp: number | null;
   /** 原始字符串对应的市场时区 (IANA name)。 */
   tz: MarketTz;
 }
@@ -213,8 +213,13 @@ export function parseMarketTime(local: string, tz: MarketTz): number {
  * @param local 市场本地时间字符串
  * @param tz    市场时区
  */
+/** 把 parseMarketTime 的 `NaN` 结果归一化为 `null`（v2：禁止手写 NaN） */
+function toNullableEpoch(ts: number): number | null {
+  return Number.isNaN(ts) ? null : ts;
+}
+
 export function buildTimeMeta(local: string, tz: MarketTz): TimeMeta {
-  return { timestamp: parseMarketTime(local, tz), tz };
+  return { timestamp: toNullableEpoch(parseMarketTime(local, tz)), tz };
 }
 
 /**
@@ -232,8 +237,8 @@ export function buildTimeMetaFromDateAndTime(
   tz: MarketTz
 ): TimeMeta {
   const wall = combineDateAndTime(baseDate, hhmm);
-  if (!wall) return { timestamp: NaN, tz };
-  return { timestamp: wallTimeToUTC(wall, tz), tz };
+  if (!wall) return { timestamp: null, tz };
+  return { timestamp: toNullableEpoch(wallTimeToUTC(wall, tz)), tz };
 }
 
 /**
@@ -248,8 +253,8 @@ export function buildTimeMetaFromDateAndTime(
  *
  * 使用 `Intl.DateTimeFormat` 处理夏令时；epoch 为 `NaN` 时返回空串。
  */
-export function formatInTz(epoch: number, tz: MarketTz): string {
-  if (!Number.isFinite(epoch)) return '';
+export function formatInTz(epoch: number | null, tz: MarketTz): string {
+  if (epoch == null || !Number.isFinite(epoch)) return '';
   // 用 sv-SE locale 直接 format —— sv-SE 天然以 `YYYY-MM-DD HH:mm:ss` 形式输出，
   // 比 formatToParts + 手动拼接更稳健（避免某些 Node ICU 实现里 minute 字段
   // 携带额外冒号后缀的怪异行为）。

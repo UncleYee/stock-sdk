@@ -89,29 +89,5 @@ export async function getOptionLHB(
     buyPositionChange: toNumberSafe(item.BUY_POSITION_CHANGE),
     netBuyPosition: toNumberSafe(item.NET_BUY_POSITION),
     buyPositionRatio: toNumberSafe(item.BUY_POSITION_RATIO),
-    tradeDate: parseDate(item.TRADE_DATE),
-    volume:
-      toNumberSafe(item.BUY_VOLUME) ??
-      toNumberSafe(item.SELL_VOLUME) ??
-      toNumberSafe(item.NET_BUY_VOLUME) ??
-      toNumberSafe(item.NET_SELL_VOLUME),
-    volumeChange:
-      toNumberSafe(item.BUY_VOLUME_CHANGE) ??
-      toNumberSafe(item.SELL_VOLUME_CHANGE),
-    amount:
-      toNumberSafe(item.BUY_POSITION) ??
-      toNumberSafe(item.SELL_POSITION) ??
-      toNumberSafe(item.NET_BUY_POSITION) ??
-      toNumberSafe(item.NET_SELL_POSITION),
-    amountChange:
-      toNumberSafe(item.BUY_POSITION_CHANGE) ??
-      toNumberSafe(item.SELL_POSITION_CHANGE),
-    openInterest:
-      toNumberSafe(item.BUY_POSITION) ??
-      toNumberSafe(item.SELL_POSITION),
-    openInterestChange:
-      toNumberSafe(item.BUY_POSITION_CHANGE) ??
-      toNumberSafe(item.SELL_POSITION_CHANGE),
-    side: inferLegacySide(String(item.TRADE_TYPE ?? '')),
   }));
 }

@@ -74,8 +74,11 @@ export function backtest<T>(options: BacktestOptions<T>): BacktestReport {
   const equityCurve: number[] = [];
 
   const recordTrade = (exitIndex: number, exitPrice: number) => {
-    const gross = exitPrice / entryPrice - 1;
-    const returnPercent = (gross - 2 * fee) * 100;
+    // 与持仓现金路径完全一致:买入扣 (1-fee)、卖出扣 (1-fee),双边手续费按复利,
+    // 而非 (gross - 2*fee) 的线性近似 —— 确保 returnPercent 与 totalReturn / equityCurve 同口径,
+    // winRate(按 returnPercent>0 统计)也才准确。
+    const returnPercent =
+      ((exitPrice / entryPrice) * (1 - fee) * (1 - fee) - 1) * 100;
     trades.push({ entryIndex, exitIndex, entryPrice, exitPrice, returnPercent });
   };
 

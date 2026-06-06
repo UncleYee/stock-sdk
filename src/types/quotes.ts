@@ -79,14 +79,17 @@ export interface FullQuote {
   totalShares: number | null;
   /** 市场（判别字段） */
   market: 'CN';
-  /** 资产类型（判别字段） */
-  assetType: 'stock' | 'index';
+  /**
+   * 资产类型（判别字段）。注:getFullQuotes 也能查指数(如 sh000001),但 parser 拿不到
+   * 交易所前缀、无法可靠判定指数,故本字段只承诺 'stock'(不在类型里承诺 index,见 TD)。
+   */
+  assetType: 'stock';
   /** 数据源 */
   source: ProviderName;
 }
 
 /**
- * 简要行情（股票 / 指数）
+ * 简要行情（股票；指数也走此结构，但 assetType 不区分，见 FullQuote 说明）
  */
 export interface SimpleQuote {
   marketId: string;
@@ -102,7 +105,7 @@ export interface SimpleQuote {
   /** 市场类型标识 如 GP-A / ZS */
   marketType: string;
   market: 'CN';
-  assetType: 'stock' | 'index';
+  assetType: 'stock';
   source: ProviderName;
 }
 

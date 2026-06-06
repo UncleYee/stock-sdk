@@ -90,7 +90,10 @@ describe('backtest', () => {
       initialCapital: 10000,
       fee: 0.001,
     });
-    // 毛 40% - 双边费 0.2% ≈ 39.8%
-    expect(r.trades[0].returnPercent).toBeCloseTo(39.8, 5);
+    // 毛 40%,双边手续费按复利 (1-fee)^2:1.4 × 0.999^2 − 1 ≈ 39.72%
+    // (与持仓现金路径一致,而非旧的 gross − 2*fee 线性近似 39.8%)
+    expect(r.trades[0].returnPercent).toBeCloseTo(39.72, 2);
+    // finding 2:returnPercent 与 totalReturn 同口径(单笔全仓买入持有 → 二者应一致)
+    expect(r.trades[0].returnPercent).toBeCloseTo(r.totalReturn, 5);
   });
 });

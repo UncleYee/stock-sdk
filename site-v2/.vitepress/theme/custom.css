@@ -1,0 +1,72 @@
+/**
+ * Stock SDK v2 文档站主题
+ * 差异化基调：teal 青绿冷色（v1 为红色 #f87171），更现代、更"工具化"的观感。
+ */
+
+:root {
+  /* —— 品牌主色：teal 冷色系 —— */
+  --vp-c-brand-1: #0d9488;
+  --vp-c-brand-2: #14b8a6;
+  --vp-c-brand-3: #2dd4bf;
+  --vp-c-brand-soft: rgba(20, 184, 166, 0.14);
+
+  --vp-c-brand: var(--vp-c-brand-1);
+  --vp-c-brand-light: var(--vp-c-brand-2);
+  --vp-c-brand-lighter: var(--vp-c-brand-3);
+
+  /* —— 首页 Hero：青绿渐变品牌名 + 光晕 —— */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, #0d9488 30%, #2dd4bf);
+  --vp-home-hero-image-background-image: linear-gradient(
+    160deg,
+    rgba(13, 148, 136, 0.5),
+    rgba(45, 212, 191, 0.35)
+  );
+  --vp-home-hero-image-filter: blur(56px);
+
+  /* —— 按钮 —— */
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-bg: var(--vp-c-brand-1);
+}
+
+.dark {
+  --vp-c-brand-1: #2dd4bf;
+  --vp-c-brand-2: #14b8a6;
+  --vp-c-brand-3: #5eead4;
+  --vp-c-brand-soft: rgba(45, 212, 191, 0.16);
+  --vp-home-hero-name-background: linear-gradient(120deg, #2dd4bf 30%, #5eead4);
+}
+
+/* —— 与 v1 拉开观感：更大圆角、更轻的特性卡片描边 —— */
+.VPFeature {
+  border-radius: 14px;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.VPFeature:hover {
+  border-color: var(--vp-c-brand-2);
+  transform: translateY(-2px);
+}
+
+/* —— Hero tagline 收窄、加点呼吸感 —— */
+.VPHero .text {
+  max-width: 640px;
+}
+.VPHero .tagline {
+  max-width: 600px;
+}
+
+/* —— 版本标识小角标（v2）—— */
+.VPNavBarTitle .title::after {
+  content: 'v2';
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--vp-c-brand-1);
+  background: var(--vp-c-brand-soft);
+  border-radius: 999px;
+  vertical-align: middle;
+}
